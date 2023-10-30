@@ -1,3 +1,5 @@
+#include <sstream>
+
 #include "ArchipelagoInterface.h"
 
 #ifdef __EMSCRIPTEN__
@@ -37,11 +39,22 @@ BOOL CArchipelago::Initialise(std::string URI) {
 		// read the archipelago slot data
 
 		//Mandatory values
-		if (!data.contains("apIdsToItemIds") ||	!data.contains("seed") || !data.contains("slot")) {
+		if (!data.contains("apIdsToItemIds") || !data.contains("itemCounts") || !data.contains("seed") || !data.contains("slot")) {
 			Core->Panic("Please check the following values : [apItemsToItemIds], [seed] and [slot]", "One of the mandatory values is missing in the slot data", AP_MissingValue, 1);
 		}
 
-		data.at("apIdsToItemIds").get_to(ItemRandomiser->pApItemsToItemIds);
+		std::map<std::string, DWORD> map;
+		data.at("apIdsToItemIds").get_to(map);
+		for (std::map<std::string, DWORD>::iterator it = map.begin(); it != map.end(); ++it) {
+			ItemRandomiser->pApItemsToItemIds[std::stol(it->first)] = it->second;
+		}
+
+		map.clear();
+		data.at("apIdsToItemIds").get_to(map);
+		for (std::map<std::string, DWORD>::iterator it = map.begin(); it != map.end(); ++it) {
+			ItemRandomiser->pItemCounts[std::stol(it->first)] = it->second;
+		}
+		
 		data.at("seed").get_to(Core->pSeed);
 		data.at("slot").get_to(Core->pSlotName);
 
@@ -106,8 +119,11 @@ BOOL CArchipelago::Initialise(std::string URI) {
 
 			//Determine the item address
 			try {
-				DWORD address = ItemRandomiser->pApItemsToItemIds.at(item.item);
-				ItemRandomiser->receivedItemsQueue.push_front((DWORD)address);
+				auto search = ItemRandomiser->pItemCounts.find(item.item);
+				ItemRandomiser->receivedItemsQueue.push_front({
+					ItemRandomiser->pApItemsToItemIds[item.item],
+					search == ItemRandomiser->pItemCounts.end() ? 1 : search->first
+				});
 			} catch (std::out_of_range e) {
 				Core->Logger("The following item has not been found in the item pool. Please check your seed options : " + itemname);
 				continue;
@@ -153,6 +169,7 @@ BOOL CArchipelago::Initialise(std::string URI) {
 	
 	return true;
 }
+
 
 VOID CArchipelago::say(std::string message) {
 	if (ap && ap->get_state() == APClient::State::SLOT_CONNECTED) {

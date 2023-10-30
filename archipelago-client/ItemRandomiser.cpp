@@ -103,8 +103,8 @@ VOID CItemRandomiser::OnGetSyntheticItem(EquipParamGoodsRow* row) {
 }
 
 BOOL CItemRandomiser::isReceivedFromServer(DWORD dItemID) {
-	for (DWORD item : receivedItemsQueue) {
-		if (dItemID == item) {
+	for (SReceivedItem item : receivedItemsQueue) {
+		if (dItemID == item.address) {
 			return true;
 		}
 	}

@@ -150,7 +150,12 @@ VOID CGameHook::giveItems() {
 	int size = ItemRandomiser->receivedItemsQueue.size();
 	if (size > 0) {
 		Core->Logger("Send an item from the list of items", true, false);
-		itemGib(ItemRandomiser->receivedItemsQueue.back());
+		SReceivedItem item = ItemRandomiser->receivedItemsQueue.back();
+		// TODO: There has to be a better way to give multiple items, but the shellcode we're
+		// invoking is totally opaque to me.
+		for (DWORD i = 0; i < item.count; i++) {
+			itemGib(item.address);
+		}
 	}
 }
 

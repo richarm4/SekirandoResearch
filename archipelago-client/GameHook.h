@@ -10,6 +10,21 @@
 
 struct SEquipBuffer;
 
+/// <summary>
+/// A struct representing an item received from another world.
+/// </summary>
+struct SReceivedItem {
+	/// <summary>
+	/// The Dark Souls 3 ID for this item.
+	/// </summary>
+	DWORD address;
+
+	/// <summary>
+	/// The number of copies of this item that were received.
+	/// </summary>
+	DWORD count;
+};
+
 typedef VOID fEquipItem(DWORD dSlot, SEquipBuffer* E);
 typedef ULONGLONG(*OnGetItemType)(UINT_PTR, DWORD, DWORD, DWORD, UINT_PTR);
 
@@ -119,8 +134,9 @@ public:
 	virtual VOID OnGetSyntheticItem(EquipParamGoodsRow* row);
 	
 	OnGetItemType OnGetItemOriginal;
-	std::unordered_map<DWORD, DWORD> pApItemsToItemIds = { };
-	std::deque<DWORD> receivedItemsQueue = { };
+	std::map<DWORD, DWORD> pApItemsToItemIds = { };
+	std::map<DWORD, DWORD> pItemCounts = { };
+	std::deque<SReceivedItem> receivedItemsQueue = { };
 	std::list<int64_t> checkedLocationsList = { };
 	bool enablePathOfTheDragon;
 
