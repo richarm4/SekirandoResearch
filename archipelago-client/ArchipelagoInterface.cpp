@@ -37,14 +37,11 @@ BOOL CArchipelago::Initialise(std::string URI) {
 		// read the archipelago slot data
 
 		//Mandatory values
-		if (!data.contains("itemsId") || !data.contains("itemsAddress") || !data.contains("base_id") ||
-			!data.contains("seed") || !data.contains("slot")) {
-			Core->Panic("Please check the following values : [itemsId], [itemsAddress], [base_id], [seed] and [slot]", "One of the mandatory values is missing in the slot data", AP_MissingValue, 1);
+		if (!data.contains("apIdsToItemIds") ||	!data.contains("seed") || !data.contains("slot")) {
+			Core->Panic("Please check the following values : [apItemsToItemIds], [seed] and [slot]", "One of the mandatory values is missing in the slot data", AP_MissingValue, 1);
 		}
 
-		data.at("itemsId").get_to(ItemRandomiser->pItemsId);
-		data.at("itemsAddress").get_to(ItemRandomiser->pItemsAddress);
-		data.at("base_id").get_to(ItemRandomiser->pBaseId);
+		data.at("apIdsToItemIds").get_to(ItemRandomiser->pApItemsToItemIds);
 		data.at("seed").get_to(Core->pSeed);
 		data.at("slot").get_to(Core->pSlotName);
 
@@ -108,19 +105,13 @@ BOOL CArchipelago::Initialise(std::string URI) {
 			Core->Logger(itemDesc);
 
 			//Determine the item address
-			DWORD address = 0;
-			for (int i = 0; i < ItemRandomiser->pItemsId.size(); i++) {
-				if (ItemRandomiser->pItemsId[i] == item.item) {
-					address = ItemRandomiser->pItemsAddress[i];
-					break;
-				}
-			}
-			if (address == 0) {
+			try {
+				DWORD address = ItemRandomiser->pApItemsToItemIds.at(item.item);
+				ItemRandomiser->receivedItemsQueue.push_front((DWORD)address);
+			} catch (std::out_of_range e) {
 				Core->Logger("The following item has not been found in the item pool. Please check your seed options : " + itemname);
 				continue;
 			}
-
-			ItemRandomiser->receivedItemsQueue.push_front((DWORD)address);
 		}
 		});
 

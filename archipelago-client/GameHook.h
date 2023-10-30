@@ -119,9 +119,7 @@ public:
 	virtual VOID OnGetSyntheticItem(EquipParamGoodsRow* row);
 	
 	OnGetItemType OnGetItemOriginal;
-	std::vector<DWORD> pItemsId = { };
-	std::vector<DWORD> pItemsAddress = { };
-	int pBaseId = 0;
+	std::unordered_map<DWORD, DWORD> pApItemsToItemIds = { };
 	std::deque<DWORD> receivedItemsQueue = { };
 	std::list<int64_t> checkedLocationsList = { };
 	bool enablePathOfTheDragon;
