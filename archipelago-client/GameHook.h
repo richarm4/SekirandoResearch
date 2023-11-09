@@ -25,6 +25,27 @@ struct SReceivedItem {
 	DWORD count;
 };
 
+// A Dark Souls 3 struct representing a single item granted to the player.
+struct SItemBufferEntry {
+	// The DS3 ID of the item being granted.
+	DWORD id;
+
+	// The number of items being granted.
+	DWORD quantity;
+
+	// The durability of the items being granted. -1 means full durability.
+	int durability;
+};
+
+// A Dark Souls 3 struct representing a set of items granted to the player.
+struct SItemBuffer {
+	// The number of items in this buffer.
+	DWORD length;
+
+	// The set of items in this buffer.
+	SItemBufferEntry items[];
+};
+
 typedef VOID fEquipItem(DWORD dSlot, SEquipBuffer* E);
 typedef ULONGLONG(*OnGetItemType)(UINT_PTR, DWORD, DWORD, DWORD, UINT_PTR);
 
@@ -35,7 +56,6 @@ public:
 	virtual BOOL applySettings();
 	virtual VOID updateRuntimeValues();
 	virtual VOID giveItems();
-	virtual VOID itemGib(DWORD itemId);
 	virtual BOOL isSoulOfCinderDefeated();
 	virtual VOID manageDeathLink();
 	virtual BYTE* findPattern(BYTE* pBaseAddress, BYTE* pbMask, const char* pszMask, size_t nLength);
@@ -58,9 +78,6 @@ public:
 	BOOL deathLinkData = false;
 
 private:
-	static BOOL replaceShellCodeAddress(BYTE* shellcode, int shellCodeOffset, LPVOID codeCave, int codeCaveOffset, int length);
-	static LPVOID InjectShellCode(LPVOID address, BYTE* shellCode, size_t len);
-	static void ConvertToLittleEndianByteArray(uintptr_t address, char* output);
 	static uintptr_t FindExecutableAddress(uintptr_t ptrOffset, std::vector<unsigned int> offsets);
 	static uintptr_t GetModuleBaseAddress();
 	static uintptr_t FindDMAAddy(HANDLE hProc, uintptr_t ptr, std::vector<unsigned int> offsets);
@@ -88,45 +105,7 @@ private:
 	const char* csDlcPattern = reinterpret_cast<const char*>("\x48\x8B\x0d\x00\x00\x00\x00\x48\x85\xc9\x0f\x84\x00\x00\x00\x00\x0f\xba\xe0\x00\x72\x65\x0f\xba\xe8");
 	const char* csDlcMask = "xxx????xxxxx????xxx?xxxxx";
 
-
-
-	BYTE ItemGibDataShellcode[17] =
-	{
-		0x01, 0x00,
-		0x00, 0x00,
-		0xF4,
-		0x01, 0x00,
-		0x40, 0xFF,
-		0xFF,
-		0xFF,
-		0xFF, 0x00,
-		0x00, 0x00,
-		0x00, 0x0A
-	};
-
-	BYTE ItemGibShellcode[93] =
-	{
-		0x48, 0x83, 0xEC, 0x48,
-		0x44, 0x8D, 0x44, 0x24, 0x20,
-		0x48, 0x8D, 0x54, 0x24, 0x30,
-		0xA1, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
-		0x8B, 0x1C, 0x25, 0xFF, 0xFF, 0xFF, 0xFF,
-		0x8B, 0x34, 0x25, 0xFF, 0xFF, 0xFF, 0xFF,
-		0xC7, 0x02, 0x01, 0x00, 0x00, 0x00,							
-		0x89, 0x72, 0x0C,
-		0x41, 0x89, 0x58, 0x14,
-		0x41, 0x89, 0x40, 0x18,
-		0x48, 0xA1, 0x78, 0x8E, 0x76, 0x44, 0x01, 0x00, 0x00, 0x00,
-		0x48, 0x8B, 0xA8, 0x80, 0x00, 0x00, 0x00,
-		0x48, 0x8B, 0x1D, 0xB2, 0x22, 0x77, 0x04,
-		0x48, 0x8B, 0xCB,
-		0xE8, 0x1A, 0xBA, 0x7D, 0x00,
-		0x48, 0x83, 0xC4, 0x48,
-		0xC3
-	};
-
 };
-
 
 class CItemRandomiser {
 public:

@@ -7,6 +7,7 @@ extern CItemRandomiser* ItemRandomiser;
 
 VOID fItemRandomiser(UINT_PTR qWorldChrMan, UINT_PTR pItemBuffer, UINT_PTR pItemData, DWORD64 qReturnAddress) {
 
+	// TODO: this check is unnecessary now and excludes pickle pee items
 	if (*(int*)(pItemData) >= 0) ItemRandomiser->RandomiseItem(qWorldChrMan, pItemBuffer, pItemData, qReturnAddress);
 
 	return;

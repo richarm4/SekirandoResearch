@@ -1,5 +1,8 @@
 #include "GameHook.h"
 
+#include "mem/module.h"
+#include "mem/pattern.h"
+
 DWORD64 qItemEquipComms = 0;
 
 DWORD64 rItemRandomiser = 0;
@@ -12,6 +15,17 @@ LPVOID itemGibDataCodeCave;
 extern CItemRandomiser* ItemRandomiser;
 extern CArchipelago* ArchipelagoInterface;
 extern CCore* Core;
+
+// A singleton object used by DS3 code involving items.
+// From https://raw.githubusercontent.com/The-Grand-Archives/Dark-Souls-III-CT-TGA/v2.3.2/DS3_The-Grand-Archives.CT
+// This should really be an AOB, but the one in the latest TGA table doesn't work for DS3 1.15.
+LPVOID* mapItemMan = (LPVOID*)0x144752300;
+
+typedef void (*ItemGibType)(LPVOID mapItemMan, SItemBuffer* items, int* unknown);
+
+// The internal DS3 ItemGib function. The final parameter's use is unknown, but it's definitely
+// safe to pass a pointer to a non-negative number.
+ItemGibType fItemGib = (ItemGibType)0x1407BBA70;
 
 /*
 * Check if a basic hook is working on this version of the game  
@@ -38,35 +52,11 @@ BOOL CGameHook::preInitialize() {
 BOOL CGameHook::initialize() {
 	Core->Logger("CGameHook::initialize", true, false);
 
-	BOOL bReturn = true;
+	// From https://raw.githubusercontent.com/The-Grand-Archives/Dark-Souls-III-CT-TGA/v2.3.2/DS3_The-Grand-Archives.CT
+	// This should really be an AOB, but the one in the latest TGA doesn't work for DS3 1.15.
+	mapItemMan = (LPVOID*)0x144752300;
 
-	//Inject ItemGibData
-	try {
-		itemGibDataCodeCave = InjectShellCode(nullptr, ItemGibDataShellcode, 17);
-	} catch (const std::exception&) {
-		Core->Logger("Cannot inject ItemGibData");
-		return false;
-	}
-
-	//Modify ItemGibShellcode
-	try {
-		bReturn &= replaceShellCodeAddress(ItemGibShellcode, 15, itemGibDataCodeCave, 0, sizeof(void*));
-		bReturn &= replaceShellCodeAddress(ItemGibShellcode, 26, itemGibDataCodeCave, 4, 4);
-		bReturn &= replaceShellCodeAddress(ItemGibShellcode, 33, itemGibDataCodeCave, 8, 4);
-	} catch (const std::exception&) {
-		Core->Logger("Cannot modify ItemGibShellcode");
-		return false;
-	}
-
-	//Inject ItemGibShellcode
-	try {
-		LPVOID itemGibCodeCave = InjectShellCode((LPVOID)0x13ffe0000, ItemGibShellcode, 93);
-	} catch (const std::exception&) {
-		Core->Logger("Cannot inject ItemGibShellcode");
-		return false;
-	}
-
-	return bReturn;
+	return true;
 }
 
 BOOL CGameHook::applySettings() {
@@ -151,45 +141,15 @@ VOID CGameHook::giveItems() {
 	if (size > 0) {
 		Core->Logger("Send an item from the list of items", true, false);
 		SReceivedItem item = ItemRandomiser->receivedItemsQueue.back();
-		// TODO: There has to be a better way to give multiple items, but the shellcode we're
-		// invoking is totally opaque to me.
-		for (DWORD i = 0; i < item.count; i++) {
-			itemGib(item.address);
-		}
+		SItemBuffer items = { 1, {item.address, item.count, -1} };
+		int unknown = 1;
+		fItemGib(*mapItemMan, &items, &unknown);
 	}
 }
 
 BOOL CGameHook::isSoulOfCinderDefeated() {
 	constexpr std::uint8_t mask7{ 0b1000'0000 };
 	return soulOfCinderDefeatedFlagRead != 0 && (int)(soulOfCinderDefeated & mask7) == 128;
-}
-
-VOID CGameHook::itemGib(DWORD itemId) {
-
-	DWORD processId = GetCurrentProcessId();
-	HANDLE hProcess = OpenProcess(PROCESS_ALL_ACCESS, NULL, processId);
-
-	uintptr_t gibItem = (uintptr_t)itemGibDataCodeCave + 4;
-
-	char* littleEndianItemId = (char*)malloc(sizeof(DWORD));
-	ConvertToLittleEndianByteArray((uintptr_t)itemId, littleEndianItemId);
-
-	try {
-		DWORD memory = 0;
-		ReadProcessMemory(hProcess, (BYTE*)gibItem, &memory, sizeof(memory), nullptr);
-		DWORD newMemory = itemId;
-		WriteProcessMemory(hProcess, (BYTE*)gibItem, &newMemory, sizeof(newMemory), nullptr);
-	} catch (const std::exception&) {
-		Core->Logger("Cannot write the item to the memory");
-	}
-
-	try {
-		typedef int func(void);
-		func* f = (func*)0x13ffe0000;
-		CreateThread(NULL, NULL, (LPTHREAD_START_ROUTINE)f, NULL, NULL, NULL);
-	} catch (const std::exception&) {
-		Core->Logger("Cannot start the 0x13ffe0000 thread");
-	}
 }
 
 BOOL CGameHook::Hook(DWORD64 qAddress, DWORD64 qDetour, DWORD64* pReturn, DWORD dByteLen) {
@@ -204,41 +164,6 @@ BOOL CGameHook::SimpleHook(LPVOID pAddress, LPVOID pDetour, LPVOID* ppOriginal) 
 	if (status != MH_OK) return false;
 	if (MH_EnableHook(pAddress) != MH_OK) return false;
 	return true;
-}
-
-BOOL CGameHook::replaceShellCodeAddress(BYTE *shellcode, int shellCodeOffset, LPVOID codeCave, int codeCaveOffset, int length) {
-
-	char* addressArray = (char*)malloc(sizeof(void*));
-	ConvertToLittleEndianByteArray((uintptr_t)codeCave + codeCaveOffset, addressArray);
-	if (addressArray == 0) { return false; }
-	memcpy(shellcode + shellCodeOffset, addressArray, length);
-	free(addressArray);
-
-	return true;
-}
-
-LPVOID CGameHook::InjectShellCode(LPVOID address, BYTE* shellCode, size_t len) {
-	
-	LPVOID pCodeCave = VirtualAlloc(address, 0x3000, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
-	if (!pCodeCave) {
-		return nullptr;
-	}
-
-	// copy the machine code into that memory:
-	std::memcpy(pCodeCave, shellCode, len);
-
-	// mark the memory as executable:
-	DWORD lpflOldProtect;
-	VirtualProtect(pCodeCave, len, PAGE_EXECUTE_READ, &lpflOldProtect);
-
-	return pCodeCave;
-}
-
-void CGameHook::ConvertToLittleEndianByteArray(uintptr_t address, char* output) {
-	for (int i = 0; i < sizeof(void*); ++i) {
-		output[i] = address & 0xff;
-		address >>= 8;
-	}
 }
 
 uintptr_t CGameHook::FindExecutableAddress(uintptr_t ptrOffset, std::vector<unsigned int> offsets) {

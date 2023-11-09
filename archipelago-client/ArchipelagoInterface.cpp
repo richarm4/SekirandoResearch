@@ -50,7 +50,7 @@ BOOL CArchipelago::Initialise(std::string URI) {
 		}
 
 		map.clear();
-		data.at("apIdsToItemIds").get_to(map);
+		data.at("itemCounts").get_to(map);
 		for (std::map<std::string, DWORD>::iterator it = map.begin(); it != map.end(); ++it) {
 			ItemRandomiser->pItemCounts[std::stol(it->first)] = it->second;
 		}
@@ -122,7 +122,7 @@ BOOL CArchipelago::Initialise(std::string URI) {
 				auto search = ItemRandomiser->pItemCounts.find(item.item);
 				ItemRandomiser->receivedItemsQueue.push_front({
 					ItemRandomiser->pApItemsToItemIds[item.item],
-					search == ItemRandomiser->pItemCounts.end() ? 1 : search->first
+					search == ItemRandomiser->pItemCounts.end() ? 1 : search->second
 				});
 			} catch (std::out_of_range e) {
 				Core->Logger("The following item has not been found in the item pool. Please check your seed options : " + itemname);
