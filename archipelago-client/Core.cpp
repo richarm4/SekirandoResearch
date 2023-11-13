@@ -99,6 +99,7 @@ VOID CCore::Run() {
 				int3
 			}
 			printf("Mod initialized successfully\n");
+			GameHook->showMessage(L"Archipelago connected");
 			isInit = true;
 		}
 

@@ -155,9 +155,13 @@ VOID CGameHook::giveItems() {
 	if (size > 0) {
 		Core->Logger("Send an item from the list of items", true, false);
 		SReceivedItem item = ItemRandomiser->receivedItemsQueue.back();
-		SItemBuffer items = { 1, {item.address, item.count, -1} };
-		int unknown = 1;
-		fItemGib(*mapItemMan, &items, &unknown);
+		if (item.address == 0x40002346) {
+			grantPathOfTheDragon();
+		} else {
+			SItemBuffer items = { 1, {item.address, item.count, -1} };
+			int unknown = 1;
+			fItemGib(*mapItemMan, &items, &unknown);
+		}
 	}
 }
 
@@ -336,6 +340,11 @@ VOID CGameHook::showMessage(std::string message) {
 
 VOID CGameHook::setEventFlag(DWORD eventId, BOOL enabled) {
 	fSetEventFlag(NULL, eventId, enabled);
+}
+
+VOID CGameHook::grantPathOfTheDragon() {
+	// Archipelago sets up this event flag to grant Path of the Dragon upon being set.
+	setEventFlag(100001312, 1);
 }
 
 BOOL CGameHook::checkIsDlcOwned() {

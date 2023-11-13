@@ -74,8 +74,6 @@ BOOL CArchipelago::Initialise(std::string URI) {
 			ap->ConnectUpdate(false, 1, true, tags);
 		}
 
-		GameHook->showMessage(L"Archipelago connected");
-
 		});
 	ap->set_slot_disconnected_handler([]() {
 		Core->Logger("Slot disconnected");

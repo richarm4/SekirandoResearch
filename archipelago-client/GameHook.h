@@ -72,6 +72,9 @@ public:
 	// the same name.
 	virtual VOID setEventFlag(DWORD eventId, BOOL enabled);
 
+	// Grants the player the Path of the Dragon gesture.
+	virtual VOID grantPathOfTheDragon();
+
 	DWORD dIsAutoEquip;
 	DWORD dLockEquipSlots;
 	DWORD dIsNoWeaponRequirements;
