@@ -68,6 +68,10 @@ public:
 	virtual VOID showMessage(std::wstring message);
 	virtual VOID showMessage(std::string message);
 
+	// Sets the event flag with the given ID on or off. Works the same as the DarkScript3 function of
+	// the same name.
+	virtual VOID setEventFlag(DWORD eventId, BOOL enabled);
+
 	DWORD dIsAutoEquip;
 	DWORD dLockEquipSlots;
 	DWORD dIsNoWeaponRequirements;

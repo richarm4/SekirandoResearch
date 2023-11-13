@@ -17,16 +17,17 @@ extern CArchipelago* ArchipelagoInterface;
 extern CCore* Core;
 extern CGameHook* GameHook;
 
+// All of the following hardcoded addresses should really be converted into AOBs that are known to
+// be compatible with DS3 1.15 _and_ DS3 1.15.2.
+
 // A singleton object used by DS3 code involving items.
 // From https://raw.githubusercontent.com/The-Grand-Archives/Dark-Souls-III-CT-TGA/v2.3.2/DS3_The-Grand-Archives.CT
 // This should really be an AOB, but the one in the latest TGA table doesn't work for DS3 1.15.
 LPVOID* mapItemMan = (LPVOID*)0x144752300;
 
-typedef wchar_t* (*GetActionEventInfoFmType)(LPVOID messages, DWORD messageId);
-
 // The internal DS3 function that looks up the current localization's message for the given ID. We
 // override this to support custom messages with custom IDs.
-GetActionEventInfoFmType GetActionEventInfoFmgOriginal;
+wchar_t* (*GetActionEventInfoFmgOriginal)(LPVOID messages, DWORD messageId);
 
 // The internal DS3 ItemGib function. The final parameter's use is unknown, but it's definitely
 // safe to pass a pointer to a non-negative number.
@@ -35,6 +36,9 @@ auto fItemGib = (void (*)(LPVOID mapItemMan, SItemBuffer * items, int* unknown))
 // The internal DS3 function that displays the banner with the given message ID. The second
 // parameter is probably some sort of enum, but always passing 1 seems to work.
 auto fShowBanner = (void (*)(UINT_PTR unused, DWORD unknown, ULONGLONG messageId))0x140473040;
+
+// The internal DS3 function for setting an event ID on or off. Corresponds to the 
+auto fSetEventFlag = (void (*)(UINT_PTR unused, DWORD event, BOOL state))0x1404859d0;
 
 /*
 * Check if a basic hook is working on this version of the game  
@@ -328,6 +332,10 @@ VOID CGameHook::showMessage(std::wstring message) {
 VOID CGameHook::showMessage(std::string message) {
 	std::wstring wideMessage(message.begin(), message.end());
 	showMessage(wideMessage);
+}
+
+VOID CGameHook::setEventFlag(DWORD eventId, BOOL enabled) {
+	fSetEventFlag(NULL, eventId, enabled);
 }
 
 BOOL CGameHook::checkIsDlcOwned() {
