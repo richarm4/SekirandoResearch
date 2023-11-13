@@ -15,17 +15,26 @@ LPVOID itemGibDataCodeCave;
 extern CItemRandomiser* ItemRandomiser;
 extern CArchipelago* ArchipelagoInterface;
 extern CCore* Core;
+extern CGameHook* GameHook;
 
 // A singleton object used by DS3 code involving items.
 // From https://raw.githubusercontent.com/The-Grand-Archives/Dark-Souls-III-CT-TGA/v2.3.2/DS3_The-Grand-Archives.CT
 // This should really be an AOB, but the one in the latest TGA table doesn't work for DS3 1.15.
 LPVOID* mapItemMan = (LPVOID*)0x144752300;
 
-typedef void (*ItemGibType)(LPVOID mapItemMan, SItemBuffer* items, int* unknown);
+typedef wchar_t* (*GetActionEventInfoFmType)(LPVOID messages, DWORD messageId);
+
+// The internal DS3 function that looks up the current localization's message for the given ID. We
+// override this to support custom messages with custom IDs.
+GetActionEventInfoFmType GetActionEventInfoFmgOriginal;
 
 // The internal DS3 ItemGib function. The final parameter's use is unknown, but it's definitely
 // safe to pass a pointer to a non-negative number.
-ItemGibType fItemGib = (ItemGibType)0x1407BBA70;
+auto fItemGib = (void (*)(LPVOID mapItemMan, SItemBuffer * items, int* unknown))0x1407BBA70;
+
+// The internal DS3 function that displays the banner with the given message ID. The second
+// parameter is probably some sort of enum, but always passing 1 seems to work.
+auto fShowBanner = (void (*)(UINT_PTR unused, DWORD unknown, ULONGLONG messageId))0x140473040;
 
 /*
 * Check if a basic hook is working on this version of the game  
@@ -42,7 +51,8 @@ BOOL CGameHook::preInitialize() {
 
 	try {
 		return Hook(0x1407BBA80, (DWORD64)&tItemRandomiser, &rItemRandomiser, 5)
-			&& SimpleHook((LPVOID)0x14058aa20, (LPVOID)&fOnGetItem, (LPVOID*)&ItemRandomiser->OnGetItemOriginal);
+			&& SimpleHook((LPVOID)0x14058aa20, (LPVOID)&fOnGetItem, (LPVOID*)&ItemRandomiser->OnGetItemOriginal)
+			&& SimpleHook((LPVOID)0x140e0c690, (LPVOID)&HookedGetActionEventInfoFmg, (LPVOID*)&GetActionEventInfoFmgOriginal);
 	} catch (const std::exception&) {
 		Core->Logger("Cannot hook the game 0x1407BBA80");
 	}
@@ -306,6 +316,20 @@ BYTE* CGameHook::findPattern(BYTE* pBaseAddress, BYTE* pbMask, const char* pszMa
 	return nullptr;
 }
 
+VOID CGameHook::showMessage(std::wstring message) {
+	// The way this works is a bit hacky. DS3 looks up all its user-facing text by ID for localization
+	// purposes, so we show a banner with an unused ID (0x10000000) and hook into the ID function to
+	// return the value of nextMessageToSend. Ideally we'd be able to just set up a 
+	nextMessageToSend = message;
+	fShowBanner(NULL, 1, 0x10000000);
+	nextMessageToSend = std::wstring();
+}
+
+VOID CGameHook::showMessage(std::string message) {
+	std::wstring wideMessage(message.begin(), message.end());
+	showMessage(wideMessage);
+}
+
 BOOL CGameHook::checkIsDlcOwned() {
 	BOOL ret = false;
 
@@ -341,4 +365,17 @@ BOOL CGameHook::checkIsDlcOwned() {
 	}
 
 	return ret;
+}
+
+const wchar_t* CGameHook::HookedGetActionEventInfoFmg(LPVOID messages, DWORD messageId) {
+	switch (messageId) {
+	case 0x10000000:
+		if (GameHook->nextMessageToSend.length() > 0) {
+			return GameHook->nextMessageToSend.c_str();
+		}
+		else {
+			return L"[AP mod bug: nextMessageToSend not set]";
+		}
+	}
+	return GetActionEventInfoFmgOriginal(messages, messageId);
 }

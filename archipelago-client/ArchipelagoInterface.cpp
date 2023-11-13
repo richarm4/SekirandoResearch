@@ -74,14 +74,20 @@ BOOL CArchipelago::Initialise(std::string URI) {
 			ap->ConnectUpdate(false, 1, true, tags);
 		}
 
+		GameHook->showMessage(L"Archipelago connected");
+
 		});
 	ap->set_slot_disconnected_handler([]() {
 		Core->Logger("Slot disconnected");
+
+		GameHook->showMessage(L"Archipelago disconnected! Don't pick up any items until it reconnects");
+
 		});
 	ap->set_slot_refused_handler([](const std::list<std::string>& errors){
 		for (const auto& error : errors) {
 			Core->Logger("Connection refused : " + error);
 		}
+		GameHook->showMessage(L"Archipelago connection refused!");
 		});
 
 	ap->set_room_info_handler([]() {
@@ -118,16 +124,17 @@ BOOL CArchipelago::Initialise(std::string URI) {
 			Core->Logger(itemDesc);
 
 			//Determine the item address
-			try {
-				auto search = ItemRandomiser->pItemCounts.find(item.item);
-				ItemRandomiser->receivedItemsQueue.push_front({
-					ItemRandomiser->pApItemsToItemIds[item.item],
-					search == ItemRandomiser->pItemCounts.end() ? 1 : search->second
-				});
-			} catch (std::out_of_range e) {
+			auto ds3IdSearch = ItemRandomiser->pApItemsToItemIds.find(item.item);
+			if (ds3IdSearch == ItemRandomiser->pApItemsToItemIds.end()) {
 				Core->Logger("The following item has not been found in the item pool. Please check your seed options : " + itemname);
 				continue;
 			}
+
+			auto countSearch = ItemRandomiser->pItemCounts.find(item.item);
+			ItemRandomiser->receivedItemsQueue.push_front({
+				ds3IdSearch->second,
+				countSearch == ItemRandomiser->pItemCounts.end() ? 1 : countSearch->second
+			});
 		}
 		});
 
@@ -135,6 +142,7 @@ BOOL CArchipelago::Initialise(std::string URI) {
 
 	ap->set_print_handler([](const std::string& msg) {
 		Core->Logger(msg);
+		GameHook->showMessage(msg);
 		});
 
 	ap->set_print_json_handler([](const std::list<APClient::TextNode>& msg) {
@@ -155,7 +163,9 @@ BOOL CArchipelago::Initialise(std::string URI) {
 						
 						std::string source = data["source"].is_string() ? data["source"].get<std::string>().c_str() : "???";
 						std::string cause = data["cause"].is_string() ? data["cause"].get<std::string>().c_str() : "???";
-						Core->Logger("Died by the hands of " + source + " : " + cause);
+						std::string message = "Died by the hands of " + source + " : " + cause;
+						Core->Logger(message);
+						GameHook->showMessage(message);
 
 						GameHook->deathLinkData = true;
 					}

@@ -63,6 +63,11 @@ public:
 	char soulOfCinderDefeated;
 	SIZE_T healthPointRead, playTimeRead, soulOfCinderDefeatedFlagRead;
 
+	// Displays a banner message to the player. Only works if they're in an active game, not on the
+	// menu.
+	virtual VOID showMessage(std::wstring message);
+	virtual VOID showMessage(std::string message);
+
 	DWORD dIsAutoEquip;
 	DWORD dLockEquipSlots;
 	DWORD dIsNoWeaponRequirements;
@@ -88,6 +93,7 @@ private:
 	static VOID RemoveSpellsRequirements();
 	static VOID RemoveEquipLoad();
 	static VOID killThePlayer();
+	static const wchar_t* HookedGetActionEventInfoFmg(LPVOID messages, DWORD messageId);
 	BOOL checkIsDlcOwned();
 
 	
@@ -105,11 +111,15 @@ private:
 	const char* csDlcPattern = reinterpret_cast<const char*>("\x48\x8B\x0d\x00\x00\x00\x00\x48\x85\xc9\x0f\x84\x00\x00\x00\x00\x0f\xba\xe0\x00\x72\x65\x0f\xba\xe8");
 	const char* csDlcMask = "xxx????xxxxx????xxx?xxxxx";
 
+	// The next message to send when calling the internal message display function. Not remotely
+	// thread-safe, but that shouldn't be an issue as long as we only display banners from the main
+	// archipelago thread.
+	std::wstring nextMessageToSend;
 };
 
 class CItemRandomiser {
 public:
-	virtual VOID RandomiseItem(UINT_PTR qWorldChrMan, UINT_PTR pItemBuffer, UINT_PTR pItemData, DWORD64 qReturnAddress);
+	virtual VOID RandomiseItem(UINT_PTR qWorldChrMan, SItemBuffer* pItemBuffer, UINT_PTR pItemData, DWORD64 qReturnAddress);
 	virtual VOID OnGetSyntheticItem(EquipParamGoodsRow* row);
 	
 	OnGetItemType OnGetItemOriginal;
@@ -148,7 +158,7 @@ extern "C" DWORD64 qItemEquipComms;
 
 extern "C" DWORD64 rItemRandomiser;
 extern "C" VOID tItemRandomiser();
-extern "C" VOID fItemRandomiser(UINT_PTR qWorldChrMan, UINT_PTR pItemBuffer, UINT_PTR pItemData, DWORD64 qReturnAddress);
+extern "C" VOID fItemRandomiser(UINT_PTR qWorldChrMan, SItemBuffer* pItemBuffer, UINT_PTR pItemData, DWORD64 qReturnAddress);
 
 extern "C" ULONGLONG fOnGetItem(UINT_PTR pEquipInventoryData, DWORD qItemCategory, DWORD qItemID, DWORD qCount, UINT_PTR qUnknown2);
 
