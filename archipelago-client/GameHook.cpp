@@ -37,8 +37,11 @@ auto fItemGib = (void (*)(LPVOID mapItemMan, SItemBuffer * items, int* unknown))
 // parameter is probably some sort of enum, but always passing 1 seems to work.
 auto fShowBanner = (void (*)(UINT_PTR unused, DWORD unknown, ULONGLONG messageId))0x140473040;
 
-// The internal DS3 function for setting an event ID on or off. Corresponds to the 
-auto fSetEventFlag = (void (*)(UINT_PTR unused, DWORD event, BOOL state))0x1404859d0;
+typedef void (*SetEventFlagType)(UINT_PTR unused, DWORD event, BOOL state);
+
+// The internal DS3 function for setting an event ID on or off. Corresponds to the `SetEventFlag`
+// function in DarkScript3.
+SetEventFlagType fSetEventFlag;
 
 /*
 * Check if a basic hook is working on this version of the game  
@@ -52,6 +55,17 @@ BOOL CGameHook::preInitialize() {
 		Core->Logger("Cannot initialize MinHook");
 		return false;
 	}
+
+	// AOB checked against DS3 1.15.0, 1.15.2, and Sekiro
+	fSetEventFlag = (SetEventFlagType)FindPattern("8b da 45 84 c0 74 ?? 48 85 c9 75", -13);
+	if (!fSetEventFlag) {
+		Core->Logger("Could not locate fSetEventFlag");
+		return false;
+	}
+
+	std::ostringstream stringStream;
+	stringStream << std::hex << result;
+	Core->Logger(stringStream.str());
 
 	try {
 		return Hook(0x1407BBA80, (DWORD64)&tItemRandomiser, &rItemRandomiser, 5)
@@ -382,6 +396,23 @@ BOOL CGameHook::checkIsDlcOwned() {
 	}
 
 	return ret;
+}
+
+UINT_PTR CGameHook::FindPattern(const char* pattern, ptrdiff_t offset) {
+	auto main_module = mem::module::main();
+	mem::pattern needle(pattern);
+	mem::default_scanner scanner(needle);
+	UINT_PTR result = NULL;
+	main_module.enum_segments([&](mem::region range, mem::prot_flags prot) {
+		scanner(range, [&](mem::pointer address) {
+			result = address.offset(offset).as<std::uintptr_t>();
+			return result == NULL;
+		});
+
+		return result == NULL;
+	});
+
+	return result;
 }
 
 const wchar_t* CGameHook::HookedGetActionEventInfoFmg(LPVOID messages, DWORD messageId) {

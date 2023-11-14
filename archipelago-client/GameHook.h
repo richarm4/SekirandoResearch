@@ -103,16 +103,17 @@ private:
 	static const wchar_t* HookedGetActionEventInfoFmg(LPVOID messages, DWORD messageId);
 	BOOL checkIsDlcOwned();
 
+	// Returns a pointer to the location of the given memory pattern in the current executable, or
+	// NULL if the pattern asn't found. If offset is passed, the pointer is adjusted by that many
+	// bytes if it's found.
+	static UINT_PTR FindPattern(const char* pattern, ptrdiff_t offset = 0);
 	
+
 	
 	uintptr_t BaseB = -1;
 	uintptr_t GameFlagData = -1;
 	uintptr_t Param = -1;
 	uintptr_t EquipLoad = -1;
-
-	uintptr_t BaseA = -1;
-	const char* baseAPattern = reinterpret_cast<const char*>("\x48\x8B\x05\x00\x00\x00\x00\x48\x85\xc0\x00\x00\x48\x8b\x40\x00\xc3");
-	const char* baseAMask = "xxx????xxx??xxx?x";
 
 	uintptr_t CSDlc = -1;
 	const char* csDlcPattern = reinterpret_cast<const char*>("\x48\x8B\x0d\x00\x00\x00\x00\x48\x85\xc9\x0f\x84\x00\x00\x00\x00\x0f\xba\xe0\x00\x72\x65\x0f\xba\xe8");
