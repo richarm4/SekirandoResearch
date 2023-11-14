@@ -21,9 +21,7 @@ extern CGameHook* GameHook;
 // be compatible with DS3 1.15 _and_ DS3 1.15.2.
 
 // A singleton object used by DS3 code involving items.
-// From https://raw.githubusercontent.com/The-Grand-Archives/Dark-Souls-III-CT-TGA/v2.3.2/DS3_The-Grand-Archives.CT
-// This should really be an AOB, but the one in the latest TGA table doesn't work for DS3 1.15.
-LPVOID* mapItemMan = (LPVOID*)0x144752300;
+LPVOID* mapItemMan;
 
 // The internal DS3 function that looks up the current localization's message for the given ID. We
 // override this to support custom messages with custom IDs.
@@ -57,15 +55,18 @@ BOOL CGameHook::preInitialize() {
 	}
 
 	// AOB checked against DS3 1.15.0, 1.15.2, and Sekiro
-	fSetEventFlag = (SetEventFlagType)FindPattern("8b da 45 84 c0 74 ?? 48 85 c9 75", -13);
+	fSetEventFlag = FindPattern("8b da 45 84 c0 74 ?? 48 85 c9 75", -13).as<SetEventFlagType>();
 	if (!fSetEventFlag) {
 		Core->Logger("Could not locate fSetEventFlag");
 		return false;
 	}
 
-	std::ostringstream stringStream;
-	stringStream << std::hex << result;
-	Core->Logger(stringStream.str());
+	// This points to a MOV instruction whose operand (three bytes in) is relative to the next
+	// instruction pointer. The resolved value of that operand is what we care about.
+	//
+	// AOB checked against DS3 1.15.0 and 1.15.2, but does not work with Sekiro
+	auto mov = FindPattern("48 8B 0D ?? ?? ?? ?? BB ?? ?? ?? ?? 41 BC");
+	mapItemMan = mov.add(7).offset(*mov.add(3).as<int32_t*>()).as<LPVOID*>();
 
 	try {
 		return Hook(0x1407BBA80, (DWORD64)&tItemRandomiser, &rItemRandomiser, 5)
@@ -79,10 +80,6 @@ BOOL CGameHook::preInitialize() {
 
 BOOL CGameHook::initialize() {
 	Core->Logger("CGameHook::initialize", true, false);
-
-	// From https://raw.githubusercontent.com/The-Grand-Archives/Dark-Souls-III-CT-TGA/v2.3.2/DS3_The-Grand-Archives.CT
-	// This should really be an AOB, but the one in the latest TGA doesn't work for DS3 1.15.
-	mapItemMan = (LPVOID*)0x144752300;
 
 	return true;
 }
@@ -398,18 +395,18 @@ BOOL CGameHook::checkIsDlcOwned() {
 	return ret;
 }
 
-UINT_PTR CGameHook::FindPattern(const char* pattern, ptrdiff_t offset) {
+mem::pointer CGameHook::FindPattern(const char* pattern, ptrdiff_t offset) {
 	auto main_module = mem::module::main();
 	mem::pattern needle(pattern);
 	mem::default_scanner scanner(needle);
-	UINT_PTR result = NULL;
+	mem::pointer result;
 	main_module.enum_segments([&](mem::region range, mem::prot_flags prot) {
 		scanner(range, [&](mem::pointer address) {
-			result = address.offset(offset).as<std::uintptr_t>();
-			return result == NULL;
+			result = address.offset(offset);
+			return (bool)result;
 		});
 
-		return result == NULL;
+		return (bool)result;
 	});
 
 	return result;

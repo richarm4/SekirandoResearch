@@ -1,6 +1,7 @@
 #pragma once
 #include "Core.h"
 #include "Params.h"
+#include "mem/mem.h"
 #include "./subprojects/minhook/include/MinHook.h"
 
 #define ItemType_Weapon 0
@@ -106,7 +107,7 @@ private:
 	// Returns a pointer to the location of the given memory pattern in the current executable, or
 	// NULL if the pattern asn't found. If offset is passed, the pointer is adjusted by that many
 	// bytes if it's found.
-	static UINT_PTR FindPattern(const char* pattern, ptrdiff_t offset = 0);
+	static mem::pointer FindPattern(const char* pattern, ptrdiff_t offset = 0);
 	
 
 	
