@@ -83,26 +83,29 @@ BOOL CGameHook::preInitialize() {
 	}
 
 	// AOB checked against DS3 1.15.0, 1.15.2, and Sekiro
-	fSetEventFlag = FindPattern("8b da 45 84 c0 74 ?? 48 85 c9 75", -0xD).as<SetEventFlagType>();
-	if (!fSetEventFlag) {
-		Core->Logger("Could not locate fSetEventFlag");
-		return false;
-	}
+	fSetEventFlag = FindPattern("fSetEventFlag", "8b da 45 84 c0 74 ?? 48 85 c9 75", -0xD)
+		.as<SetEventFlagType>();
+	if (!fSetEventFlag) return false;
 
 	// This points to a MOV instruction whose operand (three bytes in) is relative to the next
 	// instruction pointer. The resolved value of that operand is what we care about.
 	//
 	// AOB checked against DS3 1.15.0 and 1.15.2, but does not work with Sekiro
-	auto mov = FindPattern("48 8B 0D ?? ?? ?? ?? BB ?? ?? ?? ?? 41 BC");
+	auto mov = FindPattern("MapItemMan", "48 8B 0D ?? ?? ?? ?? BB ?? ?? ?? ?? 41 BC");
+	if (!mov) return false;
 	mapItemMan = mov.add(7).offset(*mov.add(3).as<int32_t*>()).as<LPVOID*>();
 
 	auto onWorldLoadedAddress = FindPattern(
+		"OnWorldLoaded",
 		"0f 10 00 0f 29 44 24 50 0f 10 48 10 0f 29 4c 24 60 0f 10 40 20 0f 29 44 24 70 0f 10 48 "
 		"30 0f 29 8c 24 80 00 00 00",
 		-0x60);
+	if (!onWorldLoadedAddress) return false;
 	
-	auto onWorldUnloadedAddress =
-		FindPattern("48 8b 35 ?? ?? ?? ?? 33 ed 48 8b f9 48 85 f6 74 27", -0x14);
+	auto onWorldUnloadedAddress = FindPattern(
+		"OnWorldUnloaded",
+		"48 8b 35 ?? ?? ?? ?? 33 ed 48 8b f9 48 85 f6 74 27",
+		-0x14);
 
 	try {
 		return Hook(0x1407BBA80, (DWORD64)&tItemRandomiser, &rItemRandomiser, 5)
@@ -253,9 +256,10 @@ VOID CGameHook::LockEquipSlots() {
 
 	DWORD dOldProtect = 0;
 
-	auto equip = FindPattern("84 c0 0f 85 c8 00 00 00 48 8d 44 24 28");
+	auto equip = FindPattern("OnEquip", "84 c0 0f 85 c8 00 00 00 48 8d 44 24 28");
 	if (!equip) return;
 	auto unequip = FindPattern(
+		"OnUnequip",
 		"e8 ?? ?? ?? ?? 84 c0 75 33 c7 44 24 20 58 02 00 00 c7 44 24 24 02 00 00 00 c7 44 24 28 29 00 "
 		"00 00 48 8d 05",
 		5);
@@ -357,7 +361,7 @@ void CGameHook::HookedOnWorldUnloaded(ULONGLONG unknown1, ULONGLONG unknown2, UL
 	OnWorldUnloadedOriginal(unknown1, unknown2, unknown3, unknown4);
 }
 
-mem::pointer CGameHook::FindPattern(const char* pattern, ptrdiff_t offset) {
+mem::pointer CGameHook::FindPattern(const char* name, const char* pattern, ptrdiff_t offset) {
 	auto main_module = mem::module::main();
 	mem::pattern needle(pattern);
 	mem::default_scanner scanner(needle);
@@ -371,6 +375,12 @@ mem::pointer CGameHook::FindPattern(const char* pattern, ptrdiff_t offset) {
 		return (bool)result;
 	});
 
+	if (!result) {
+		std::ostringstream stream;
+		stream << "Failed to find pattern for " << name;
+		Core->Panic(stream.str().c_str(), "Missing pattern", FE_PatternFailed, true);
+		return mem::pointer();
+	}
 	return result;
 }
 

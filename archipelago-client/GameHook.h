@@ -142,7 +142,9 @@ private:
 	// Returns a pointer to the location of the given memory pattern in the current executable, or
 	// NULL if the pattern asn't found. If offset is passed, the pointer is adjusted by that many
 	// bytes if it's found.
-	static mem::pointer FindPattern(const char* pattern, ptrdiff_t offset = 0);
+	//
+	// The name is used for error reporting.
+	static mem::pointer FindPattern(const char* name, const char* pattern, ptrdiff_t offset = 0);
 	
 
 	

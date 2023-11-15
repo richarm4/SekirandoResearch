@@ -37,6 +37,7 @@
 #define AP_MissingValue 12
 #define FE_MissingDLC 13
 #define FE_ApplySettings 14
+#define FE_PatternFailed 15
 
 #define VERSION "2.2.0"
 
