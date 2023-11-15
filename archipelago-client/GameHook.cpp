@@ -252,21 +252,28 @@ uintptr_t CGameHook::GetModuleBaseAddress() {
 VOID CGameHook::LockEquipSlots() {
 
 	DWORD dOldProtect = 0;
-	DWORD64 qEquip = 0x140B70F45;
-	DWORD64 qUnequip = 0x140B736EA;
 
-	if (!VirtualProtect((LPVOID)qEquip, 1, PAGE_EXECUTE_READWRITE, &dOldProtect)) return;
-	if (!VirtualProtect((LPVOID)qUnequip, 1, PAGE_EXECUTE_READWRITE, &dOldProtect)) return;
+	auto equip = FindPattern("84 c0 0f 85 c8 00 00 00 48 8d 44 24 28");
+	if (!equip) return;
+	auto unequip = FindPattern(
+		"e8 ?? ?? ?? ?? 84 c0 75 33 c7 44 24 20 58 02 00 00 c7 44 24 24 02 00 00 00 c7 44 24 28 29 00 "
+		"00 00 48 8d 05",
+		5);
+	if (!unequip) return;
 
-	*(BYTE*)qEquip = 0x30;
-	*(BYTE*)qUnequip = 0x30;
+	if (!VirtualProtect(equip.as<LPVOID>(), 1, PAGE_EXECUTE_READWRITE, &dOldProtect)) return;
+	if (!VirtualProtect(unequip.as<LPVOID>(), 1, PAGE_EXECUTE_READWRITE, &dOldProtect)) return;
 
-	if (!VirtualProtect((LPVOID)qEquip, 1, dOldProtect, &dOldProtect)) return;
-	if (!VirtualProtect((LPVOID)qUnequip, 1, dOldProtect, &dOldProtect)) return;
+	*equip.as<BYTE*>() = 0x30;
+	*unequip.as<BYTE*>() = 0x30;
+
+	if (!VirtualProtect(equip.as<LPVOID>(), 1, dOldProtect, &dOldProtect)) return;
+	if (!VirtualProtect(unequip.as<LPVOID>(), 1, dOldProtect, &dOldProtect)) return;
 
 	return;
 }
 
+// TODO: handle this in the offline randomizer
 VOID CGameHook::RemoveSpellsRequirements() {
 
 	DWORD processId = GetCurrentProcessId();
