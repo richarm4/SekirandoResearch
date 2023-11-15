@@ -59,7 +59,6 @@ public:
 	virtual VOID giveItems();
 	virtual BOOL isSoulOfCinderDefeated();
 	virtual VOID manageDeathLink();
-	virtual BYTE* findPattern(BYTE* pBaseAddress, BYTE* pbMask, const char* pszMask, size_t nLength);
 	int healthPoint = -1, lastHealthPoint = -1, playTime = -1;
 	char soulOfCinderDefeated;
 	SIZE_T healthPointRead, playTimeRead, soulOfCinderDefeatedFlagRead;
@@ -94,7 +93,6 @@ private:
 	static uintptr_t FindExecutableAddress(uintptr_t ptrOffset, std::vector<unsigned int> offsets);
 	static uintptr_t GetModuleBaseAddress();
 	static uintptr_t FindDMAAddy(HANDLE hProc, uintptr_t ptr, std::vector<unsigned int> offsets);
-	static uintptr_t FindDMAAddyStandalone(uintptr_t ptr, std::vector<unsigned int> offsets);
 	static BOOL Hook(DWORD64 qAddress, DWORD64 qDetour, DWORD64* pReturn, DWORD dByteLen);
 	static BOOL SimpleHook(LPVOID pAddress, LPVOID pDetour, LPVOID* ppOriginal);
 	static VOID LockEquipSlots();
@@ -115,10 +113,6 @@ private:
 	uintptr_t GameFlagData = -1;
 	uintptr_t Param = -1;
 	uintptr_t EquipLoad = -1;
-
-	uintptr_t CSDlc = -1;
-	const char* csDlcPattern = reinterpret_cast<const char*>("\x48\x8B\x0d\x00\x00\x00\x00\x48\x85\xc9\x0f\x84\x00\x00\x00\x00\x0f\xba\xe0\x00\x72\x65\x0f\xba\xe8");
-	const char* csDlcMask = "xxx????xxxxx????xxx?xxxxx";
 
 	// The next message to send when calling the internal message display function. Not remotely
 	// thread-safe, but that shouldn't be an issue as long as we only display banners from the main

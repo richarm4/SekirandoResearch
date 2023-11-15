@@ -196,6 +196,7 @@ inline EquipParamGoodsRow* GetGoodsParam(DWORD id) {
 	EquipParamGoodsRow* row = (EquipParamGoodsRow*)FindRow(equipParamGoods, id);
 	if (id == NULL) {
 		printf("ERROR: Failed to locate item ID %d, randomizer may not be set up correctly\n", id);
+		return NULL;
 	}
 	else {
 		return row;
