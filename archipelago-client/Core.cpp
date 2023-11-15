@@ -86,7 +86,7 @@ VOID CCore::Run() {
 	ArchipelagoInterface->update();
 	GameHook->updateRuntimeValues();
 
-	if(GameHook->healthPointRead != 0 && GameHook->playTimeRead !=0) {
+	if (GameHook->isWorldLoaded) {
 
 		if (!isInit && ArchipelagoInterface->isConnected() && initProtectionDelay <= 0) {
 			ReadConfigFiles();
@@ -115,7 +115,7 @@ VOID CCore::Run() {
 				sendGoalStatus = false;
 				ArchipelagoInterface->gameFinished();
 			}
-		} else {
+		} else if (initProtectionDelay > 0) {
 			int secondsRemaining = (RUN_SLEEP / 1000) * initProtectionDelay;
 			printf("The mod will be initialized in %d seconds\n", secondsRemaining);
 			initProtectionDelay--;

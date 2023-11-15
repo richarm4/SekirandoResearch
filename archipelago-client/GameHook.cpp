@@ -41,6 +41,16 @@ typedef void (*SetEventFlagType)(UINT_PTR unused, DWORD event, BOOL state);
 // function in DarkScript3.
 SetEventFlagType fSetEventFlag;
 
+// The function that allocates a bunch of in-game singletons like WorldChrMan. Once this runs, it's
+// generally safe to make in-game changes.
+void (*OnWorldLoadedOriginal)(ULONGLONG unknown1, ULONGLONG unknown2, ULONGLONG unknown3,
+	ULONGLONG unknown4, ULONGLONG unknown5, ULONGLONG unknown6);
+
+// The deallocator dual of OnWorldLoadedOriginal. Once this runs, it's no longer safe to make
+// in-game changes.
+void (*OnWorldUnloadedOriginal)(ULONGLONG unknown1, ULONGLONG unknown2, ULONGLONG unknown3,
+	ULONGLONG unknown4);
+
 // A singleton class with informatino about installed DLCs.
 struct CSDlc : public FD4Singleton<CSDlc, "CSDlc"> {
 	void** vftable_ptr;
@@ -80,12 +90,22 @@ BOOL CGameHook::preInitialize() {
 	auto mov = FindPattern("48 8B 0D ?? ?? ?? ?? BB ?? ?? ?? ?? 41 BC");
 	mapItemMan = mov.add(7).offset(*mov.add(3).as<int32_t*>()).as<LPVOID*>();
 
+	auto onWorldLoadedAddress = FindPattern(
+		"48 8d 68 a1 48 81 ec a0 00 00 00 48 c7 45 ff fe ff ff ff 48 89 58 10 48 89 70 18 48 89 78 20 "
+		"48 8b 05 ?? ?? ?? ?? 48 33 c4",
+		-8);
+
+	auto onWorldUnloadedAddress =
+		FindPattern("48 8b 35 ?? ?? ?? ?? 33 ed 48 8b f9 48 85 f6 74 27", -0x14);
+
 	try {
 		return Hook(0x1407BBA80, (DWORD64)&tItemRandomiser, &rItemRandomiser, 5)
 			&& SimpleHook((LPVOID)0x14058aa20, (LPVOID)&fOnGetItem, (LPVOID*)&ItemRandomiser->OnGetItemOriginal)
-			&& SimpleHook((LPVOID)0x140e0c690, (LPVOID)&HookedGetActionEventInfoFmg, (LPVOID*)&GetActionEventInfoFmgOriginal);
+			&& SimpleHook((LPVOID)0x140e0c690, (LPVOID)&HookedGetActionEventInfoFmg, (LPVOID*)&GetActionEventInfoFmgOriginal)
+			&& SimpleHook(onWorldLoadedAddress.as<LPVOID>(), (LPVOID)&HookedOnWorldLoaded, (LPVOID*)&OnWorldLoadedOriginal)
+			&& SimpleHook(onWorldUnloadedAddress.as<LPVOID>(), (LPVOID)&HookedOnWorldUnloaded, (LPVOID*)&OnWorldUnloadedOriginal);
 	} catch (const std::exception&) {
-		Core->Logger("Cannot hook the game 0x1407BBA80");
+		Core->Logger("Cannot hook the game");
 	}
 	return false;
 }
@@ -150,20 +170,9 @@ VOID CGameHook::updateRuntimeValues() {
 
 	lastHealthPoint = healthPoint;
 
-	ReadProcessMemory(hProcess, (BYTE*)healthPointAddr, &healthPoint, sizeof(healthPoint), &healthPointRead);
-	ReadProcessMemory(hProcess, (BYTE*)playTimeAddr, &playTime, sizeof(playTime), &playTimeRead);
-	ReadProcessMemory(hProcess, (BYTE*)soulOfCinderDefeatedFlagAddress, &soulOfCinderDefeated, sizeof(soulOfCinderDefeated), &soulOfCinderDefeatedFlagRead);
-
-	//Enable the Path of The Dragon Gesture manually when receiving the item
-	if (ItemRandomiser->enablePathOfTheDragon) {
-		ItemRandomiser->enablePathOfTheDragon = false;
-
-		std::vector<unsigned int> pathOfDragonOffsets = { 0x10, 0x7B8, 0x90 };
-		uintptr_t gestureAddr = FindExecutableAddress(0x4740178, pathOfDragonOffsets); //BaseA + Path of the dragon Offsets
-
-		char gestureUnlocked = 0x43;
-		WriteProcessMemory(hProcess, (BYTE*)gestureAddr, &gestureUnlocked, sizeof(gestureUnlocked), nullptr);
-	}
+	ReadProcessMemory(hProcess, (BYTE*)healthPointAddr, &healthPoint, sizeof(healthPoint), NULL);
+	ReadProcessMemory(hProcess, (BYTE*)playTimeAddr, &playTime, sizeof(playTime), NULL);
+	ReadProcessMemory(hProcess, (BYTE*)soulOfCinderDefeatedFlagAddress, &soulOfCinderDefeated, sizeof(soulOfCinderDefeated), NULL);
 }
 
 VOID CGameHook::giveItems() {
@@ -184,7 +193,7 @@ VOID CGameHook::giveItems() {
 
 BOOL CGameHook::isSoulOfCinderDefeated() {
 	constexpr std::uint8_t mask7{ 0b1000'0000 };
-	return soulOfCinderDefeatedFlagRead != 0 && (int)(soulOfCinderDefeated & mask7) == 128;
+	return isWorldLoaded && (int)(soulOfCinderDefeated & mask7) == 128;
 }
 
 BOOL CGameHook::Hook(DWORD64 qAddress, DWORD64 qDetour, DWORD64* pReturn, DWORD dByteLen) {
@@ -329,6 +338,18 @@ VOID CGameHook::grantPathOfTheDragon() {
 BOOL CGameHook::checkIsDlcOwned() {
 	auto dlc = CSDlc::instance();
 	return dlc->dlc1Installed && dlc->dlc2Installed;
+}
+
+void CGameHook::HookedOnWorldLoaded(ULONGLONG unknown1, ULONGLONG unknown2, ULONGLONG unknown3,
+		ULONGLONG unknown4, ULONGLONG unknown5, ULONGLONG unknown6) {
+	OnWorldLoadedOriginal(unknown1, unknown2, unknown3, unknown4, unknown5, unknown6);
+	GameHook->isWorldLoaded = true;
+}
+
+void CGameHook::HookedOnWorldUnloaded(ULONGLONG unknown1, ULONGLONG unknown2, ULONGLONG unknown3,
+		ULONGLONG unknown4) {
+	GameHook->isWorldLoaded = false;
+	OnWorldUnloadedOriginal(unknown1, unknown2, unknown3, unknown4);
 }
 
 mem::pointer CGameHook::FindPattern(const char* pattern, ptrdiff_t offset) {

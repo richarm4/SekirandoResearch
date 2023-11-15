@@ -88,7 +88,9 @@ public:
 	virtual VOID manageDeathLink();
 	int healthPoint = -1, lastHealthPoint = -1, playTime = -1;
 	char soulOfCinderDefeated;
-	SIZE_T healthPointRead, playTimeRead, soulOfCinderDefeatedFlagRead;
+
+	// Whether the game world is currently loaded for the player.
+	BOOL isWorldLoaded = false;
 
 	// Displays a banner message to the player. Only works if they're in an active game, not on the
 	// menu.
@@ -129,6 +131,14 @@ private:
 	static const wchar_t* HookedGetActionEventInfoFmg(LPVOID messages, DWORD messageId);
 	BOOL checkIsDlcOwned();
 
+	// A hooked function that's run after the data has been loaded for the current game world.
+	static void HookedOnWorldLoaded(ULONGLONG unknown1, ULONGLONG unknown2, ULONGLONG unknown3,
+		ULONGLONG unknown4, ULONGLONG unknown5, ULONGLONG unknown6);
+
+	// A hooked function that's run to unload data for the current game world.
+	static void HookedOnWorldUnloaded(ULONGLONG unknown1, ULONGLONG unknown2, ULONGLONG unknown3,
+		ULONGLONG unknown4);
+
 	// Returns a pointer to the location of the given memory pattern in the current executable, or
 	// NULL if the pattern asn't found. If offset is passed, the pointer is adjusted by that many
 	// bytes if it's found.
@@ -157,7 +167,6 @@ public:
 	std::map<DWORD, DWORD> pItemCounts = { };
 	std::deque<SReceivedItem> receivedItemsQueue = { };
 	std::list<int64_t> checkedLocationsList = { };
-	bool enablePathOfTheDragon;
 
 private:
 	int isARandomizedLocation(DWORD dItemID);
