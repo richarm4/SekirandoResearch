@@ -17,29 +17,32 @@ extern CArchipelago* ArchipelagoInterface;
 extern CCore* Core;
 extern CGameHook* GameHook;
 
+// A Dark Souls 3 struct representing an assignment from an inventory slot to an equipment slot.
+struct SEquipBuffer {
+	uint8_t unk00[0x8];
+
+	// The slot into which the item should go.
+	EquipSlot dEquipSlot;
+
+	uint8_t unk01[0x2C];
+
+	// The index in the player's inventory of the item to equip.
+	DWORD dInventorySlot;
+
+	uint8_t unk02[0x60];
+};
+
 // All of the following hardcoded addresses should really be converted into AOBs that are known to
 // be compatible with DS3 1.15 _and_ DS3 1.15.2.
 
 // A singleton object used by DS3 code involving items.
-LPVOID* mapItemMan;
+LPVOID* mapItemMan =
+	ResolveMov(FindPattern("MapItemMan", "48 8B 0D ?? ?? ?? ?? BB ?? ?? ?? ?? 41 BC"))
+	.as<LPVOID*>();
 
 // The internal DS3 function that looks up the current localization's message for the given ID. We
 // override this to support custom messages with custom IDs.
 wchar_t* (*GetActionEventInfoFmgOriginal)(LPVOID messages, DWORD messageId);
-
-// The internal DS3 ItemGib function. The final parameter's use is unknown, but it's definitely
-// safe to pass a pointer to a non-negative number.
-auto fItemGib = (void (*)(LPVOID mapItemMan, SItemBuffer * items, int* unknown))0x1407BBA70;
-
-// The internal DS3 function that displays the banner with the given message ID. The second
-// parameter is probably some sort of enum, but always passing 1 seems to work.
-auto fShowBanner = (void (*)(UINT_PTR unused, DWORD unknown, ULONGLONG messageId))0x140473040;
-
-typedef void (*SetEventFlagType)(UINT_PTR unused, DWORD event, BOOL state);
-
-// The internal DS3 function for setting an event ID on or off. Corresponds to the `SetEventFlag`
-// function in DarkScript3.
-SetEventFlagType fSetEventFlag;
 
 // The function that allocates a bunch of in-game singletons like WorldChrMan. Once this runs, it's
 // generally safe to make in-game changes.
@@ -69,6 +72,16 @@ struct SprjEventFlagMan : public FD4Singleton<SprjEventFlagMan, "SprjEventFlagMa
 	uint8_t* worldFlags;
 };
 
+GameDataMan* GameDataMan::instance() {
+	static GameDataMan* static_address = [] {
+		return ResolveMov(FindPattern(
+			"GameDataMan",
+			"48 8B 05 ?? ?? ?? ?? 48 85 C0 ?? ?? 48 8B 40 ?? C3"
+		)).as<GameDataMan*>();
+	}();
+	return static_address;
+}
+
 /*
 * Check if a basic hook is working on this version of the game  
 */
@@ -81,19 +94,6 @@ BOOL CGameHook::preInitialize() {
 		Core->Logger("Cannot initialize MinHook");
 		return false;
 	}
-
-	// AOB checked against DS3 1.15.0, 1.15.2, and Sekiro
-	fSetEventFlag = FindPattern("fSetEventFlag", "8b da 45 84 c0 74 ?? 48 85 c9 75", -0xD)
-		.as<SetEventFlagType>();
-	if (!fSetEventFlag) return false;
-
-	// This points to a MOV instruction whose operand (three bytes in) is relative to the next
-	// instruction pointer. The resolved value of that operand is what we care about.
-	//
-	// AOB checked against DS3 1.15.0 and 1.15.2, but does not work with Sekiro
-	auto mov = FindPattern("MapItemMan", "48 8B 0D ?? ?? ?? ?? BB ?? ?? ?? ?? 41 BC");
-	if (!mov) return false;
-	mapItemMan = mov.add(7).offset(*mov.add(3).as<int32_t*>()).as<LPVOID*>();
 
 	auto onWorldLoadedAddress = FindPattern(
 		"OnWorldLoaded",
@@ -128,7 +128,6 @@ BOOL CGameHook::initialize() {
 BOOL CGameHook::applySettings() {
 	BOOL bReturn = true;
 
-	if (dIsAutoEquip) { bReturn &= Hook(0x1407BBE92, (DWORD64)&tAutoEquip, &rAutoEquip, 6); }
 	if (dIsNoWeaponRequirements) { bReturn &= Hook(0x140C073B9, (DWORD64)&tNoWeaponRequirements, &rNoWeaponRequirements, 7); }
 	if (dIsNoSpellsRequirements) { RemoveSpellsRequirements(); }
 	if (dLockEquipSlots) { LockEquipSlots(); }
@@ -176,6 +175,11 @@ VOID CGameHook::updateRuntimeValues() {
 }
 
 VOID CGameHook::giveItems() {
+	auto fItemGib = FindPattern(
+		"fItemGib",
+		"8b 31 89 75 a7 8b 41 04 89 44 24 3c 89 45 ab 8b 41 08 89 44 24 38 45 32 ff"
+	).as<void (*)(LPVOID mapItemMan, SItemBuffer * items, int* unknown)>();
+
 	//Send the next item in the list
 	int size = ItemRandomiser->receivedItemsQueue.size();
 	if (size > 0) {
@@ -321,6 +325,9 @@ VOID CGameHook::RemoveEquipLoad() {
 }
 
 VOID CGameHook::showMessage(std::wstring message) {
+	auto fShowBanner = FindPattern("90 48 8b 44 24 30 48 85 c0 75 11", -0x2D)
+		.as<void (*)(UINT_PTR unused, DWORD unknown, ULONGLONG messageId)>;
+
 	// The way this works is a bit hacky. DS3 looks up all its user-facing text by ID for localization
 	// purposes, so we show a banner with an unused ID (0x10000000) and hook into the ID function to
 	// return the value of nextMessageToSend. Ideally we'd be able to just set up a 
@@ -335,12 +342,26 @@ VOID CGameHook::showMessage(std::string message) {
 }
 
 VOID CGameHook::setEventFlag(DWORD eventId, BOOL enabled) {
+	static auto fSetEventFlag =
+		FindPattern("fSetEventFlag", "8b da 45 84 c0 74 ?? 48 85 c9 75", -0xD)
+			.as<void (*)(UINT_PTR unused, DWORD event, BOOL state)>();
+
 	fSetEventFlag(NULL, eventId, enabled);
 }
 
 VOID CGameHook::grantPathOfTheDragon() {
 	// Archipelago sets up this event flag to grant Path of the Dragon upon being set.
 	setEventFlag(100001312, 1);
+}
+
+VOID CGameHook::equipItem(EquipSlot equipSlot, DWORD inventorySlot) {
+	auto fEquipItem = FindPattern("fEquipItem", "84 c0 0f 84 d7 02 00 00 83 7b 3c ff 75 0e", -0x2D)
+		.as<void (*)(EquipSlot dSlot, SEquipBuffer* buffer)>();
+
+	SEquipBuffer buffer{};
+	buffer.dEquipSlot = equipSlot;
+	buffer.dInventorySlot = inventorySlot;
+	fEquipItem(equipSlot, &buffer);
 }
 
 BOOL CGameHook::checkIsDlcOwned() {
@@ -361,7 +382,7 @@ void CGameHook::HookedOnWorldUnloaded(ULONGLONG unknown1, ULONGLONG unknown2, UL
 	OnWorldUnloadedOriginal(unknown1, unknown2, unknown3, unknown4);
 }
 
-mem::pointer CGameHook::FindPattern(const char* name, const char* pattern, ptrdiff_t offset) {
+mem::pointer FindPattern(const char* name, const char* pattern, ptrdiff_t offset) {
 	auto main_module = mem::module::main();
 	mem::pattern needle(pattern);
 	mem::default_scanner scanner(needle);
@@ -382,6 +403,12 @@ mem::pointer CGameHook::FindPattern(const char* name, const char* pattern, ptrdi
 		return mem::pointer();
 	}
 	return result;
+}
+
+static mem::pointer ResolveMov(mem::pointer pointer) {
+	// The pointer points to a MOV instruction whose operand (three bytes in) is relative to the
+	// next instruction pointer. The resolved value of that operand is what we care about.
+	return pointer.add(7).offset(*pointer.add(3).as<int32_t*>());
 }
 
 const wchar_t* CGameHook::HookedGetActionEventInfoFmg(LPVOID messages, DWORD messageId) {

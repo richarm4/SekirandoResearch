@@ -5,11 +5,16 @@
 extern CCore* Core;
 extern CItemRandomiser* ItemRandomiser;
 extern CGameHook* GameHook;
+extern CAutoEquip* AutoEquip;
 
 VOID fItemRandomiser(WorldChrMan* qWorldChrMan, SItemBuffer* pItemBuffer, UINT_PTR pItemData, DWORD64 qReturnAddress) {
 
-	// TODO: this check is unnecessary now and excludes pickle pee items
-	if (*(int*)(pItemData) >= 0) ItemRandomiser->RandomiseItem(qWorldChrMan, pItemBuffer, pItemData, qReturnAddress);
+	// TODO: This check excludes pickle pee items but also dropped items, which may be desirable
+	// for auto-equip mode. Figure out whether to remove it.
+	if (*(int*)(pItemData) >= 0) {
+		ItemRandomiser->RandomiseItem(qWorldChrMan, pItemBuffer, pItemData, qReturnAddress);
+		if (ItemRandomiser->dIsAutoEquip) AutoEquip->AutoEquipItem(pItemBuffer);
+	}
 
 	return;
 }

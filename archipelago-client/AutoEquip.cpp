@@ -5,111 +5,77 @@ extern CAutoEquip* AutoEquip;
 extern SCore* CoreStruct;
 extern CGameHook* GameHook;
 
-DWORD dRingSlotSelect = 0x11;
+EquipSlot dRingSlotSelect = EquipSlot::ring1;
 DWORD pHelmetList[110];
 DWORD pBodyList[105];
 DWORD pHandsList[100];
 DWORD pLegsList[105];
 
-VOID fAutoEquip(UINT_PTR pItemBuffer, DWORD64 pItemData, DWORD64 qReturnAddress) {
-	if (*(int*)(pItemData) >= 0) AutoEquip->AutoEquipItem(pItemBuffer, qReturnAddress);
-	return;
-};
-
-VOID CAutoEquip::AutoEquipItem(UINT_PTR pItemBuffer, DWORD64 qReturnAddress) {
-
-	SEquipBuffer pEquipBuffer;
-	DWORD dItemAmount = 0;
-	DWORD dItemID = 0;
-	DWORD dItemQuantity = 0;
-	DWORD dItemDurability = 0;
+VOID CAutoEquip::AutoEquipItem(SItemBuffer* pItemBuffer) {
 
 	if (!pItemBuffer) {
 		Core->Panic("Null buffer!", "...\\Source\\AutoEquip\\AutoEquip.cpp", FE_NullPtr, 1);
 		int3
 	};
 
-	dItemAmount = *(int*)pItemBuffer;
-	pItemBuffer += 4;
-
-	if (dItemAmount > 6) {
+	if (pItemBuffer->length > 6) {
 		Core->Panic("Too many items!", "...\\Source\\AutoEquip\\AutoEquip.cpp", FE_AmountTooHigh, 1);
 		int3
 	};
-	
-	while (dItemAmount) {
 
-		dItemID = *(int*)(pItemBuffer);
-		dItemQuantity = *(int*)(pItemBuffer + 0x04);
-		dItemDurability = *(int*)(pItemBuffer + 0x08);
+	for (int i = 0; i < pItemBuffer->length; i++) {
 
-		if (SortItem(dItemID, &pEquipBuffer)) {
-			if (!AutoEquip->EquipItem) {
-				Core->Panic("Bad function call", "...\\Source\\AutoEquip\\AutoEquip.cpp", FE_BadFunc, 1);
-				int3
-			};
-			LockUnlockEquipSlots(1);
-			AutoEquip->EquipItem(pEquipBuffer.dEquipSlot, &pEquipBuffer);
+		SItemBufferEntry* dItem = &pItemBuffer->items[i];
+		auto equipSlot = SortItem(dItem->id);
+		if (!equipSlot.has_value()) return;
+
+		auto inventorySlot = GetInventorySlotID(dItem->id);
+		if (inventorySlot < 0) {
+			std::ostringstream stream;
+			stream << "Unable to find item: " << std::hex << dItem->id;
+			Core->Panic(stream.str().c_str(), "...\\Source\\AutoEquip\\AutoEquip.cpp", HE_InvalidInventoryEquipID, 0);
+			return;
 		};
-	
-		dItemAmount--;
-		pItemBuffer += 0x0C;
-	};
+
+		LockUnlockEquipSlots(1);
+		GameHook->equipItem(equipSlot.value(), inventorySlot);
+	}
 
 	return;
 };
 
-BOOL CAutoEquip::SortItem(DWORD dItemID, SEquipBuffer* E) {
+std::optional<EquipSlot> CAutoEquip::SortItem(DWORD dItemID) {
 
-	char pBuffer[MAX_PATH];
-	DWORD dItemType = 0;
-	DWORD dEquipSlot = 0;
-
-	dItemType = (dItemID >> 0x1C);
-
-#ifdef DEBUG
-	std::cout << "dItemID : " << dItemID << "\n";
-#endif
-
+	DWORD dItemType = (dItemID >> 0x1C);
 	switch (dItemType) {
 		case(ItemType_Weapon): {
-			if ((dItemID >> 0x10) == 6) return false; //Don't equip ammo
-			if ((dItemID & 0xFF000000) << 4 != 0x10000000) dEquipSlot = 1;  //It's a weapon
+			if ((dItemID >> 0x10) == 6) return std::nullopt; //Don't equip ammo
+			if ((dItemID & 0xFF000000) << 4 != 0x10000000) return EquipSlot::rightHand1;
 			break;
 		};
 		case(ItemType_Protector): {
-			if (FindEquipType(dItemID, &pHelmetList[0])) dEquipSlot = 0x0C;
-			else if (FindEquipType(dItemID, &pBodyList[0])) dEquipSlot = 0x0D;
-			else if (FindEquipType(dItemID, &pHandsList[0])) dEquipSlot = 0x0E;
-			else if (FindEquipType(dItemID, &pLegsList[0])) dEquipSlot = 0x0F;
-			else return false;
+			if (FindEquipType(dItemID, &pHelmetList[0])) return EquipSlot::head;
+			else if (FindEquipType(dItemID, &pBodyList[0])) return EquipSlot::body;
+			else if (FindEquipType(dItemID, &pHandsList[0])) return EquipSlot::arms;
+			else if (FindEquipType(dItemID, &pLegsList[0])) return EquipSlot::legs;
+			else return std::nullopt;
 			break;
 		};
 		case(ItemType_Accessory): {
-			if ((dItemID & 0xFFFFFF00) == 0x20002700) { return false; } //It's a covenant item
-			if (dRingSlotSelect >= 0x15) dRingSlotSelect = 0x11;
-			dEquipSlot = dRingSlotSelect;
-			dRingSlotSelect++;
-			break;
+			if ((dItemID & 0xFFFFFF00) == 0x20002700) return std::nullopt; //It's a covenant item
+			if (dRingSlotSelect > EquipSlot::ring4) dRingSlotSelect = EquipSlot::ring1;
+			EquipSlot result = dRingSlotSelect;
+			dRingSlotSelect = static_cast<EquipSlot>(static_cast<DWORD>(dRingSlotSelect) + 1);
+			return result;
 		};
-		case(ItemType_Goods): return false;
+		case(ItemType_Goods): return std::nullopt;
 		default: {
-			sprintf_s(pBuffer, "Invalid item type: %i (%08X)", dItemType, dItemID);
-			Core->Panic(pBuffer, "...\\Source\\AutoEquip\\AutoEquip.cpp", HE_InvalidItemType, 0);
-			return false;
+			std::ostringstream stream;
+			stream << "Invalid item type: " << dItemType << " (" << std::hex << dItemID << ")";
+			Core->Panic(stream.str().c_str(), "...\\Source\\AutoEquip\\AutoEquip.cpp", HE_InvalidItemType, 0);
+			return std::nullopt;
 		};
 	};
-
-	E->dEquipSlot = dEquipSlot;
-	E->dInventorySlot = GetInventorySlotID(dItemID);
-
-	if (E->dInventorySlot < 0) {
-		sprintf_s(pBuffer, "Unable to find item: %08X", dItemID);
-		Core->Panic(pBuffer, "...\\Source\\AutoEquip\\AutoEquip.cpp", HE_InvalidInventoryEquipID, 0);
-		return false;
-	};
-
-	return true;
 };
 
 BOOL CAutoEquip::FindEquipType(DWORD dItem, DWORD* pArray) {
@@ -132,16 +98,9 @@ BOOL CAutoEquip::FindEquipType(DWORD dItem, DWORD* pArray) {
 DWORD CAutoEquip::GetInventorySlotID(DWORD dItemID) {
 
 	DWORD dInventoryID = 0;
-	UINT_PTR qInventoryPtr = 0;
 	UINT_PTR qInventoryScanPtr = 0;
 
-	qInventoryPtr = *(UINT_PTR*)GameHook->qLocalPlayer;
-	qInventoryPtr = *(UINT_PTR*)(qInventoryPtr + 0x10);
-	if (!qInventoryPtr) {
-		Core->Panic("'Local Player' does not exist", "...\\Source\\AutoEquip\\AutoEquip.cpp", HE_NoPlayerChar, 1);
-		int3
-	};
-
+	auto qInventoryPtr = (UINT_PTR)GameDataMan::instance()->localPlayerData;
 	qInventoryPtr = *(UINT_PTR*)(qInventoryPtr + 0x470);
 	qInventoryPtr = *(UINT_PTR*)(qInventoryPtr + 0x10);
 	qInventoryPtr += 0x1B8;
@@ -163,41 +122,10 @@ DWORD CAutoEquip::GetInventorySlotID(DWORD dItemID) {
 
 VOID CAutoEquip::LockUnlockEquipSlots(int iIsUnlock) {
 
-	UINT_PTR qWorldChrMan = 0;
-	DWORD dChrEquipAnimFlags = 0;
+	auto actionModule = WorldChrMan::instance()->mainCharacter->container->actionModule;
+	if (iIsUnlock) actionModule->chrEquipAnimFlags |= 1;
+	else actionModule->chrEquipAnimFlags &= 0xFFFFFFFE;
 
-	qWorldChrMan = *(UINT_PTR*)(GameHook->qWorldChrMan);
-	if (!qWorldChrMan) {
-		Core->Panic("WorldChrMan", "...\\Source\\AutoEquip\\AutoEquip.cpp", HE_NoPlayerChar, 1);
-		int3
-	};
-
-	qWorldChrMan = *(UINT_PTR*)(qWorldChrMan + 0x80);
-	if (!qWorldChrMan) {
-		Core->Panic("'WorldChr Player' does not exist", "...\\Source\\AutoEquip\\AutoEquip.cpp", HE_NoPlayerChar, 1);
-		int3
-	};
-
-	qWorldChrMan = *(UINT_PTR*)(qWorldChrMan + 0x1F90);
-	if (!qWorldChrMan) {
-		Core->Panic("'WorldChr Data' does not exist", "...\\Source\\AutoEquip\\AutoEquip.cpp", HE_NoPlayerChar, 0);
-		return;
-	};
-
-	qWorldChrMan = *(UINT_PTR*)(qWorldChrMan);
-	if (!qWorldChrMan) {
-		Core->Panic("'WorldChr Flags' does not exist", "...\\Source\\AutoEquip\\AutoEquip.cpp", HE_NoPlayerChar, 0);
-		return;
-	};
-
-	dChrEquipAnimFlags = *(DWORD*)(qWorldChrMan + 0x10);
-
-	if (iIsUnlock) dChrEquipAnimFlags |= 1;
-	else dChrEquipAnimFlags &= 0xFFFFFFFE;
-
-	*(DWORD*)(qWorldChrMan + 0x10) = dChrEquipAnimFlags;
-
-	return;
 };
 
 extern DWORD pHelmetList[110]{

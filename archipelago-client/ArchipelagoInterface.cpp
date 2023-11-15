@@ -59,7 +59,7 @@ BOOL CArchipelago::Initialise(std::string URI) {
 		data.at("slot").get_to(Core->pSlotName);
 
 		if (data.contains("options")) {
-			(data.at("options").contains("auto_equip")) ? (data.at("options").at("auto_equip").get_to(GameHook->dIsAutoEquip)) : GameHook->dIsAutoEquip = false;
+			(data.at("options").contains("auto_equip")) ? (data.at("options").at("auto_equip").get_to(ItemRandomiser->dIsAutoEquip)) : ItemRandomiser->dIsAutoEquip = false;
 			(data.at("options").contains("lock_equip")) ? (data.at("options").at("lock_equip").get_to(GameHook->dLockEquipSlots)) : GameHook->dLockEquipSlots = false;
 			(data.at("options").contains("no_weapon_requirements")) ? (data.at("options").at("no_weapon_requirements").get_to(GameHook->dIsNoWeaponRequirements)) : GameHook->dIsNoWeaponRequirements = false;
 			(data.at("options").contains("death_link")) ? (data.at("options").at("death_link").get_to(GameHook->dIsDeathLink)) : GameHook->dIsDeathLink = false;

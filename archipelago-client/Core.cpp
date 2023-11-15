@@ -16,7 +16,6 @@ VOID CCore::Start() {
 	GameHook = new CGameHook();
 	ItemRandomiser = new CItemRandomiser();
 	AutoEquip = new CAutoEquip();
-	AutoEquip->EquipItem = (fEquipItem*)0x140AFBBB0;
 
 	if (!Core->Initialise()) {
 		Core->Panic("Failed to initialise", "...\\Randomiser\\Core\\Core.cpp", FE_InitFailed, 1);

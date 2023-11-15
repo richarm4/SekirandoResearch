@@ -9,21 +9,26 @@
 #define ItemType_Accessory 2
 #define ItemType_Goods 4
 
-struct SEquipBuffer;
-
-/// <summary>
-/// A struct representing an item received from another world.
-/// </summary>
+// A struct representing an item received from another world.
 struct SReceivedItem {
-	/// <summary>
-	/// The Dark Souls 3 ID for this item.
-	/// </summary>
+	// The Dark Souls 3 ID for this item.
 	DWORD address;
 
-	/// <summary>
-	/// The number of copies of this item that were received.
-	/// </summary>
+	// The number of copies of this item that were received.
 	DWORD count;
+};
+
+// Constant values used to represent different equip slots in the DS3 inventory.
+enum class EquipSlot: DWORD {
+	rightHand1 = 0x01,
+	head = 0x0C,
+	body = 0x0D,
+	arms = 0x0E,
+	legs = 0x0E,
+	ring1 = 0x11,
+	ring2 = 0x12,
+	ring3 = 0x13,
+	ring4 = 0x14,
 };
 
 // A Dark Souls 3 struct representing a single item granted to the player.
@@ -47,6 +52,12 @@ struct SItemBuffer {
 	SItemBufferEntry items[];
 };
 
+// A Dark Souls 3 struct containing information about the current character's available actions.
+struct SSprjChrActionFlagModule {
+	uint8_t unk00[0x10];
+	DWORD chrEquipAnimFlags;
+};
+
 // A Dark Souls 3 struct containing information about the current character.
 struct SSprjChrDataModule {
 	uint8_t unk00[0xD8];
@@ -57,7 +68,8 @@ struct SSprjChrDataModule {
 
 // A Dark Souls 3 struct containing various SPRJ modules.
 struct SChrInsComponentContainer {
-	uint8_t unk00[0x18];
+	SSprjChrActionFlagModule* actionModule;
+	uint8_t unk00[0x10];
 	SSprjChrDataModule* dataModule;
 };
 
@@ -74,7 +86,15 @@ struct WorldChrMan : public FD4Singleton<WorldChrMan, "WorldChrMan"> {
 	SPlayerIns* mainCharacter;
 };
 
-typedef VOID fEquipItem(DWORD dSlot, SEquipBuffer* E);
+// A singleton class containing information about the current game world.
+struct GameDataMan {
+	void** vftable_ptr;
+	DWORD unk00;
+	LPVOID localPlayerData;
+
+	static GameDataMan* instance();
+};
+
 typedef ULONGLONG(*OnGetItemType)(UINT_PTR, DWORD, DWORD, DWORD, UINT_PTR);
 
 class CGameHook {
@@ -104,16 +124,15 @@ public:
 	// Grants the player the Path of the Dragon gesture.
 	virtual VOID grantPathOfTheDragon();
 
-	DWORD dIsAutoEquip;
+	// Equips an item for the active player based on its index in their inventory.
+	virtual VOID equipItem(EquipSlot equipSlot, DWORD inventorySlot);
+
 	DWORD dLockEquipSlots;
 	DWORD dIsNoWeaponRequirements;
 	DWORD dIsNoSpellsRequirements;
 	DWORD dIsNoEquipLoadRequirements;
 	DWORD dIsDeathLink;
 	DWORD dEnableDLC;
-	UINT_PTR qLocalPlayer = 0x144740178;
-	UINT_PTR qWorldChrMan = 0x144768E78;
-	UINT_PTR qSprjLuaEvent = 0x14473A9C8;
 	HANDLE hHeap;
 
 	BOOL deathLinkData = false;
@@ -138,13 +157,6 @@ private:
 	// A hooked function that's run to unload data for the current game world.
 	static void HookedOnWorldUnloaded(ULONGLONG unknown1, ULONGLONG unknown2, ULONGLONG unknown3,
 		ULONGLONG unknown4);
-
-	// Returns a pointer to the location of the given memory pattern in the current executable, or
-	// NULL if the pattern asn't found. If offset is passed, the pointer is adjusted by that many
-	// bytes if it's found.
-	//
-	// The name is used for error reporting.
-	static mem::pointer FindPattern(const char* name, const char* pattern, ptrdiff_t offset = 0);
 	
 
 	
@@ -163,7 +175,8 @@ class CItemRandomiser {
 public:
 	virtual VOID RandomiseItem(WorldChrMan* qWorldChrMan, SItemBuffer* pItemBuffer, UINT_PTR pItemData, DWORD64 qReturnAddress);
 	virtual VOID OnGetSyntheticItem(EquipParamGoodsRow* row);
-	
+
+	DWORD dIsAutoEquip;
 	OnGetItemType OnGetItemOriginal;
 	std::map<DWORD, DWORD> pApItemsToItemIds = { };
 	std::map<DWORD, DWORD> pItemCounts = { };
@@ -178,22 +191,26 @@ private:
 
 class CAutoEquip {
 public:
-	virtual VOID AutoEquipItem(UINT_PTR pItemBuffer, DWORD64 qReturnAddress);
-	virtual BOOL SortItem(DWORD dItemID, SEquipBuffer* E);
+	virtual VOID AutoEquipItem(SItemBuffer* pItemBuffer);
 	virtual BOOL FindEquipType(DWORD dItem, DWORD* pArray);
 	virtual DWORD GetInventorySlotID(DWORD dItemID);
 	virtual VOID LockUnlockEquipSlots(int iIsUnlock);
-	fEquipItem* EquipItem; //0x140AFBBB0
+
+	// Returns the equip slot for the given item ID, or std::nullopt if the item shouldn't be
+	// auto-equipped.
+	std::optional<EquipSlot> SortItem(DWORD dItemID);
 };
 
-struct SEquipBuffer {
-	DWORD dUn1;
-	DWORD dUn2;
-	DWORD dEquipSlot;
-	char unkBytes[0x2C];
-	DWORD dInventorySlot;
-	char paddingBytes[0x60];
-};
+// Returns a pointer to the location of the given memory pattern in the current executable, or
+// NULL if the pattern asn't found. If offset is passed, the pointer is adjusted by that many
+// bytes if it's found.
+//
+// The name is used for error reporting.
+static mem::pointer FindPattern(const char* name, const char* pattern, ptrdiff_t offset = 0);
+
+// Given a pointer to the beginning of a MOV instruction whose argument is a relative offset,
+// returns the address that offset is pointing to.
+static mem::pointer ResolveMov(mem::pointer pointer);
 
 extern "C" DWORD64 qItemEquipComms;
 
@@ -202,10 +219,6 @@ extern "C" VOID tItemRandomiser();
 extern "C" VOID fItemRandomiser(WorldChrMan* qWorldChrMan, SItemBuffer* pItemBuffer, UINT_PTR pItemData, DWORD64 qReturnAddress);
 
 extern "C" ULONGLONG fOnGetItem(UINT_PTR pEquipInventoryData, DWORD qItemCategory, DWORD qItemID, DWORD qCount, UINT_PTR qUnknown2);
-
-extern "C" DWORD64 rAutoEquip;
-extern "C" VOID tAutoEquip();
-extern "C" VOID fAutoEquip(UINT_PTR pItemBuffer, DWORD64 pItemData, DWORD64 qReturnAddress);
 
 extern "C" DWORD64 rNoWeaponRequirements;
 extern "C" VOID tNoWeaponRequirements();
