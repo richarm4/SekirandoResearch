@@ -6,7 +6,7 @@ extern CCore* Core;
 extern CItemRandomiser* ItemRandomiser;
 extern CGameHook* GameHook;
 
-VOID fItemRandomiser(UINT_PTR qWorldChrMan, SItemBuffer* pItemBuffer, UINT_PTR pItemData, DWORD64 qReturnAddress) {
+VOID fItemRandomiser(WorldChrMan* qWorldChrMan, SItemBuffer* pItemBuffer, UINT_PTR pItemData, DWORD64 qReturnAddress) {
 
 	// TODO: this check is unnecessary now and excludes pickle pee items
 	if (*(int*)(pItemData) >= 0) ItemRandomiser->RandomiseItem(qWorldChrMan, pItemBuffer, pItemData, qReturnAddress);
@@ -15,7 +15,7 @@ VOID fItemRandomiser(UINT_PTR qWorldChrMan, SItemBuffer* pItemBuffer, UINT_PTR p
 }
 
 
-VOID CItemRandomiser::RandomiseItem(UINT_PTR qWorldChrMan, SItemBuffer* pItemBuffer, UINT_PTR pItemData, DWORD64 qReturnAddress) {
+VOID CItemRandomiser::RandomiseItem(WorldChrMan* qWorldChrMan, SItemBuffer* pItemBuffer, UINT_PTR pItemData, DWORD64 qReturnAddress) {
 
 	if (pItemBuffer->length > 6) {
 		Core->Panic("Too many items!", "...\\Source\\ItemRandomiser\\ItemRandomiser.cpp", FE_AmountTooHigh, 1);

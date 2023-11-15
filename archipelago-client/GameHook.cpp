@@ -131,13 +131,7 @@ VOID CGameHook::manageDeathLink() {
 
 VOID CGameHook::killThePlayer() {
 	Core->Logger("Kill the player", true, false);
-	DWORD processId = GetCurrentProcessId();
-	HANDLE hProcess = OpenProcess(PROCESS_ALL_ACCESS, NULL, processId);
-	std::vector<unsigned int> hpOffsets = { 0x80, 0x1F90, 0x18, 0xD8 };
-	uintptr_t healthPointAddr = FindExecutableAddress(0x4768E78, hpOffsets); //BaseB + HP Offsets
-
-	int newHP = 0;
-	WriteProcessMemory(hProcess, (BYTE*)healthPointAddr, &newHP, sizeof(newHP), nullptr);
+	WorldChrMan::instance()->player->container->dataModule->hp = 0;
 }
 
 VOID CGameHook::updateRuntimeValues() {

@@ -47,6 +47,33 @@ struct SItemBuffer {
 	SItemBufferEntry items[];
 };
 
+// A Dark Souls 3 struct containing information about the current character.
+struct SSprjChrDataModule {
+	uint8_t unk00[0xD8];
+
+	// The character's HP.
+	int hp;
+};
+
+// A Dark Souls 3 struct containing various SPRJ modules.
+struct SChrInsComponentContainer {
+	uint8_t unk00[0x18];
+	SSprjChrDataModule* dataModule;
+};
+
+// A Dark Souls 3 struct containing information about the current play session.
+struct SPlayerIns {
+	uint8_t unk00[0x1F90];
+	SChrInsComponentContainer* container;
+};
+
+// A singleton class containing information about the current play session.
+struct WorldChrMan : public FD4Singleton<WorldChrMan, "WorldChrMan"> {
+	void** vftable_ptr;
+	uint8_t unk00[0x78];
+	SPlayerIns* player;
+};
+
 typedef VOID fEquipItem(DWORD dSlot, SEquipBuffer* E);
 typedef ULONGLONG(*OnGetItemType)(UINT_PTR, DWORD, DWORD, DWORD, UINT_PTR);
 
@@ -122,7 +149,7 @@ private:
 
 class CItemRandomiser {
 public:
-	virtual VOID RandomiseItem(UINT_PTR qWorldChrMan, SItemBuffer* pItemBuffer, UINT_PTR pItemData, DWORD64 qReturnAddress);
+	virtual VOID RandomiseItem(WorldChrMan* qWorldChrMan, SItemBuffer* pItemBuffer, UINT_PTR pItemData, DWORD64 qReturnAddress);
 	virtual VOID OnGetSyntheticItem(EquipParamGoodsRow* row);
 	
 	OnGetItemType OnGetItemOriginal;
@@ -161,7 +188,7 @@ extern "C" DWORD64 qItemEquipComms;
 
 extern "C" DWORD64 rItemRandomiser;
 extern "C" VOID tItemRandomiser();
-extern "C" VOID fItemRandomiser(UINT_PTR qWorldChrMan, SItemBuffer* pItemBuffer, UINT_PTR pItemData, DWORD64 qReturnAddress);
+extern "C" VOID fItemRandomiser(WorldChrMan* qWorldChrMan, SItemBuffer* pItemBuffer, UINT_PTR pItemData, DWORD64 qReturnAddress);
 
 extern "C" ULONGLONG fOnGetItem(UINT_PTR pEquipInventoryData, DWORD qItemCategory, DWORD qItemID, DWORD qCount, UINT_PTR qUnknown2);
 
