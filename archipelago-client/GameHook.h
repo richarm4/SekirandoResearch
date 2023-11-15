@@ -71,7 +71,7 @@ struct SPlayerIns {
 struct WorldChrMan : public FD4Singleton<WorldChrMan, "WorldChrMan"> {
 	void** vftable_ptr;
 	uint8_t unk00[0x78];
-	SPlayerIns* player;
+	SPlayerIns* mainCharacter;
 };
 
 typedef VOID fEquipItem(DWORD dSlot, SEquipBuffer* E);
@@ -86,7 +86,7 @@ public:
 	virtual VOID giveItems();
 	virtual BOOL isSoulOfCinderDefeated();
 	virtual VOID manageDeathLink();
-	int healthPoint = -1, lastHealthPoint = -1, playTime = -1;
+	int healthPoint = -1, lastHealthPoint = -1;
 	char soulOfCinderDefeated;
 
 	// Whether the game world is currently loaded for the player.
@@ -132,8 +132,8 @@ private:
 	BOOL checkIsDlcOwned();
 
 	// A hooked function that's run after the data has been loaded for the current game world.
-	static void HookedOnWorldLoaded(ULONGLONG unknown1, ULONGLONG unknown2, ULONGLONG unknown3,
-		ULONGLONG unknown4, ULONGLONG unknown5, ULONGLONG unknown6);
+	static LPVOID HookedOnWorldLoaded(ULONGLONG unknown1, ULONGLONG unknown2, DWORD unknown3,
+		DWORD unknown4, DWORD unknown5);
 
 	// A hooked function that's run to unload data for the current game world.
 	static void HookedOnWorldUnloaded(ULONGLONG unknown1, ULONGLONG unknown2, ULONGLONG unknown3,

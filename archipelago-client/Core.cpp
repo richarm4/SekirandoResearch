@@ -84,9 +84,9 @@ int initProtectionDelay = 3;
 VOID CCore::Run() {
 
 	ArchipelagoInterface->update();
-	GameHook->updateRuntimeValues();
 
 	if (GameHook->isWorldLoaded) {
+		GameHook->updateRuntimeValues();
 
 		if (!isInit && ArchipelagoInterface->isConnected() && initProtectionDelay <= 0) {
 			ReadConfigFiles();

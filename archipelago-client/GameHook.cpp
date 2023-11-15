@@ -43,8 +43,8 @@ SetEventFlagType fSetEventFlag;
 
 // The function that allocates a bunch of in-game singletons like WorldChrMan. Once this runs, it's
 // generally safe to make in-game changes.
-void (*OnWorldLoadedOriginal)(ULONGLONG unknown1, ULONGLONG unknown2, ULONGLONG unknown3,
-	ULONGLONG unknown4, ULONGLONG unknown5, ULONGLONG unknown6);
+LPVOID (*OnWorldLoadedOriginal)(ULONGLONG unknown1, ULONGLONG unknown2, DWORD unknown3,
+	DWORD unknown4, DWORD unknown5);
 
 // The deallocator dual of OnWorldLoadedOriginal. Once this runs, it's no longer safe to make
 // in-game changes.
@@ -63,6 +63,12 @@ struct CSDlc : public FD4Singleton<CSDlc, "CSDlc"> {
 	bool dlc2Installed;
 };
 
+// A singleton class with information about the event system.
+struct SprjEventFlagMan : public FD4Singleton<SprjEventFlagMan, "SprjEventFlagMan"> {
+	// An array of bit flags that correspond to various states of the local game world.
+	uint8_t* worldFlags;
+};
+
 /*
 * Check if a basic hook is working on this version of the game  
 */
@@ -77,7 +83,7 @@ BOOL CGameHook::preInitialize() {
 	}
 
 	// AOB checked against DS3 1.15.0, 1.15.2, and Sekiro
-	fSetEventFlag = FindPattern("8b da 45 84 c0 74 ?? 48 85 c9 75", -13).as<SetEventFlagType>();
+	fSetEventFlag = FindPattern("8b da 45 84 c0 74 ?? 48 85 c9 75", -0xD).as<SetEventFlagType>();
 	if (!fSetEventFlag) {
 		Core->Logger("Could not locate fSetEventFlag");
 		return false;
@@ -91,10 +97,10 @@ BOOL CGameHook::preInitialize() {
 	mapItemMan = mov.add(7).offset(*mov.add(3).as<int32_t*>()).as<LPVOID*>();
 
 	auto onWorldLoadedAddress = FindPattern(
-		"48 8d 68 a1 48 81 ec a0 00 00 00 48 c7 45 ff fe ff ff ff 48 89 58 10 48 89 70 18 48 89 78 20 "
-		"48 8b 05 ?? ?? ?? ?? 48 33 c4",
-		-8);
-
+		"0f 10 00 0f 29 44 24 50 0f 10 48 10 0f 29 4c 24 60 0f 10 40 20 0f 29 44 24 70 0f 10 48 "
+		"30 0f 29 8c 24 80 00 00 00",
+		-0x60);
+	
 	auto onWorldUnloadedAddress =
 		FindPattern("48 8b 35 ?? ?? ?? ?? 33 ed 48 8b f9 48 85 f6 74 27", -0x14);
 
@@ -151,28 +157,19 @@ VOID CGameHook::manageDeathLink() {
 
 VOID CGameHook::killThePlayer() {
 	Core->Logger("Kill the player", true, false);
-	WorldChrMan::instance()->player->container->dataModule->hp = 0;
+	WorldChrMan::instance()->mainCharacter->container->dataModule->hp = 0;
+}
+
+VOID debugPrint(const char* prefix, void* data) {
+	std::ostringstream stream;
+	stream << prefix << std::hex << (ULONGLONG)data;
+	Core->Logger(stream.str());
 }
 
 VOID CGameHook::updateRuntimeValues() {
-
-	DWORD processId = GetCurrentProcessId();
-	HANDLE hProcess = OpenProcess(PROCESS_ALL_ACCESS, NULL, processId);
-
-	std::vector<unsigned int> hpOffsets = { 0x80, 0x1F90, 0x18, 0xD8 };
-	uintptr_t healthPointAddr = FindExecutableAddress(0x4768E78, hpOffsets); //BaseB + HP Offsets
-
-	std::vector<unsigned int> playTimeOffsets = { 0xA4 };
-	uintptr_t playTimeAddr = FindExecutableAddress(0x4740178, playTimeOffsets); //BaseA + PlayTime Offsets	
-
-	std::vector<unsigned int> soulOfCinderDefeatedFlagOffsets = { 0x00, 0x5F67 };
-	uintptr_t soulOfCinderDefeatedFlagAddress = FindExecutableAddress(0x473BE28, soulOfCinderDefeatedFlagOffsets); //GameFlagData + Sould of Cinder defeated flag Offsets	
-
 	lastHealthPoint = healthPoint;
-
-	ReadProcessMemory(hProcess, (BYTE*)healthPointAddr, &healthPoint, sizeof(healthPoint), NULL);
-	ReadProcessMemory(hProcess, (BYTE*)playTimeAddr, &playTime, sizeof(playTime), NULL);
-	ReadProcessMemory(hProcess, (BYTE*)soulOfCinderDefeatedFlagAddress, &soulOfCinderDefeated, sizeof(soulOfCinderDefeated), NULL);
+	healthPoint = WorldChrMan::instance()->mainCharacter->container->dataModule->hp;
+	soulOfCinderDefeated = SprjEventFlagMan::instance()->worldFlags[0x5F67];
 }
 
 VOID CGameHook::giveItems() {
@@ -340,10 +337,11 @@ BOOL CGameHook::checkIsDlcOwned() {
 	return dlc->dlc1Installed && dlc->dlc2Installed;
 }
 
-void CGameHook::HookedOnWorldLoaded(ULONGLONG unknown1, ULONGLONG unknown2, ULONGLONG unknown3,
-		ULONGLONG unknown4, ULONGLONG unknown5, ULONGLONG unknown6) {
-	OnWorldLoadedOriginal(unknown1, unknown2, unknown3, unknown4, unknown5, unknown6);
+LPVOID CGameHook::HookedOnWorldLoaded(ULONGLONG unknown1, ULONGLONG unknown2, DWORD unknown3,
+	DWORD unknown4, DWORD unknown5) {
+	auto result = OnWorldLoadedOriginal(unknown1, unknown2, unknown3, unknown4, unknown5);
 	GameHook->isWorldLoaded = true;
+	return result;
 }
 
 void CGameHook::HookedOnWorldUnloaded(ULONGLONG unknown1, ULONGLONG unknown2, ULONGLONG unknown3,
