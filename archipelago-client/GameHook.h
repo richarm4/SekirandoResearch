@@ -95,11 +95,11 @@ struct GameDataMan {
 	static GameDataMan* instance();
 };
 
-typedef ULONGLONG(*OnGetItemType)(UINT_PTR, DWORD, DWORD, DWORD, UINT_PTR);
+typedef ULONGLONG (*OnGetItemType)(UINT_PTR, DWORD, DWORD, DWORD, UINT_PTR);
+typedef void (*ItemGibType)(LPVOID, SItemBuffer*, LPVOID);
 
 class CGameHook {
 public:
-	virtual BOOL preInitialize();
 	virtual BOOL initialize();
 	virtual BOOL applySettings();
 	virtual VOID updateRuntimeValues();
@@ -144,8 +144,6 @@ private:
 	static BOOL Hook(DWORD64 qAddress, DWORD64 qDetour, DWORD64* pReturn, DWORD dByteLen);
 	static BOOL SimpleHook(LPVOID pAddress, LPVOID pDetour, LPVOID* ppOriginal);
 	static VOID LockEquipSlots();
-	static VOID RemoveSpellsRequirements();
-	static VOID RemoveEquipLoad();
 	static VOID killThePlayer();
 	static const wchar_t* HookedGetActionEventInfoFmg(LPVOID messages, DWORD messageId);
 	BOOL checkIsDlcOwned();
@@ -173,20 +171,16 @@ private:
 
 class CItemRandomiser {
 public:
-	virtual VOID RandomiseItem(WorldChrMan* qWorldChrMan, SItemBuffer* pItemBuffer, UINT_PTR pItemData, DWORD64 qReturnAddress);
+	virtual VOID RandomiseItem(WorldChrMan* qWorldChrMan, SItemBuffer* pItemBuffer, LPVOID pItemData);
 	virtual VOID OnGetSyntheticItem(EquipParamGoodsRow* row);
 
 	DWORD dIsAutoEquip;
+	ItemGibType ItemGibOriginal;
 	OnGetItemType OnGetItemOriginal;
 	std::map<DWORD, DWORD> pApItemsToItemIds = { };
 	std::map<DWORD, DWORD> pItemCounts = { };
 	std::deque<SReceivedItem> receivedItemsQueue = { };
 	std::list<int64_t> checkedLocationsList = { };
-
-private:
-	int isARandomizedLocation(DWORD dItemID);
-	BOOL isReceivedFromServer(DWORD dItemID);
-	BOOL isProgressiveLocation(DWORD dItemID);
 };
 
 class CAutoEquip {
@@ -214,12 +208,6 @@ static mem::pointer ResolveMov(mem::pointer pointer);
 
 extern "C" DWORD64 qItemEquipComms;
 
-extern "C" DWORD64 rItemRandomiser;
-extern "C" VOID tItemRandomiser();
-extern "C" VOID fItemRandomiser(WorldChrMan* qWorldChrMan, SItemBuffer* pItemBuffer, UINT_PTR pItemData, DWORD64 qReturnAddress);
+extern "C" VOID HookedItemGib(WorldChrMan* qWorldChrMan, SItemBuffer* pItemBuffer, LPVOID pItemData);
 
 extern "C" ULONGLONG fOnGetItem(UINT_PTR pEquipInventoryData, DWORD qItemCategory, DWORD qItemID, DWORD qCount, UINT_PTR qUnknown2);
-
-extern "C" DWORD64 rNoWeaponRequirements;
-extern "C" VOID tNoWeaponRequirements();
-extern "C" VOID fNoWeaponRequirements(DWORD * pRequirementPtr);

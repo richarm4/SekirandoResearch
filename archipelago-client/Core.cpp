@@ -50,13 +50,8 @@ BOOL CCore::Initialise() {
 	Core->Logger("Type '/help for more information", false);
 	Core->Logger("-----------------------------------------------------", false);
 
-	if (!GameHook->preInitialize()) {
-		Core->Panic("Check if the game version is 1.15 and not 1.15.1, you must use the provided DarkSoulsIII.exe", "Cannot hook the game", FE_InitFailed, 1);
-		return false;
-	}
-
 	if (!GameHook->initialize()) {
-		Core->Panic("Failed to initialise GameHook", "...\\Randomiser\\Core\\Core.cpp", FE_InitFailed, 1);
+		Core->Panic("Check if the game version is 1.15 and not 1.15.1, you must use the provided DarkSoulsIII.exe", "Cannot hook the game", FE_InitFailed, 1);
 		return false;
 	}
 
@@ -132,9 +127,11 @@ VOID CCore::Run() {
 */
 VOID CCore::CleanReceivedItemsList() {
 	if (!ItemRandomiser->receivedItemsQueue.empty()) {
-		Core->Logger("Removing " + pLastReceivedIndex + std::string(" items according to the last_received_index"), true, false);
+		Core->Logger(std::format("Removing {0} items according to the last_received_index", pLastReceivedIndex), true, false);
 		for (int i = 0; i < pLastReceivedIndex; i++) {
-			ItemRandomiser->receivedItemsQueue.pop_back();
+			if (!ItemRandomiser->receivedItemsQueue.empty()) {
+				ItemRandomiser->receivedItemsQueue.pop_back();
+			}
 		}
 	}
 }

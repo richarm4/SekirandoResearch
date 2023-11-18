@@ -283,8 +283,6 @@
     <ClInclude Include="subprojects\wswrap\include\wswrap_websocketpp.hpp" />
   </ItemGroup>
   <ItemGroup>
-    <MASM Include="_ItemRandomiser.asm" />
-    <MASM Include="_NoRequirements.asm" />
     <None Include="dinput8.def" />
     <MASM Include="dinput8_asm.asm">
       <FileType>Document</FileType>

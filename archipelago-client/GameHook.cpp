@@ -40,6 +40,14 @@ LPVOID* mapItemMan =
 	ResolveMov(FindPattern("MapItemMan", "48 8B 0D ?? ?? ?? ?? BB ?? ?? ?? ?? 41 BC"))
 	.as<LPVOID*>();
 
+// The underlying function that passes items to the player. We use this both to give items from
+// Archipelago and to hook into to inspect items the player picks up.
+auto fItemGib = FindPattern(
+	"fItemGib",
+	"8b 31 89 75 a7 8b 41 04 89 44 24 3c 89 45 ab 8b 41 08 89 44 24 38 45 32 ff",
+	-0x64 // TODO: this is wrong for 1.15.2, find a different AoB
+).as<ItemGibType>();
+
 // The internal DS3 function that looks up the current localization's message for the given ID. We
 // override this to support custom messages with custom IDs.
 wchar_t* (*GetActionEventInfoFmgOriginal)(LPVOID messages, DWORD messageId);
@@ -82,10 +90,8 @@ GameDataMan* GameDataMan::instance() {
 	return static_address;
 }
 
-/*
-* Check if a basic hook is working on this version of the game  
-*/
-BOOL CGameHook::preInitialize() {
+// Hook the functions necessary to customize game behavior.
+BOOL CGameHook::initialize() {
 	Core->Logger("CGameHook::preInitialize", true, false);
 
 	try {
@@ -108,7 +114,7 @@ BOOL CGameHook::preInitialize() {
 		-0x14);
 
 	try {
-		return Hook(0x1407BBA80, (DWORD64)&tItemRandomiser, &rItemRandomiser, 5)
+		return SimpleHook((LPVOID)fItemGib, (LPVOID)&HookedItemGib, (LPVOID*)&ItemRandomiser->ItemGibOriginal)
 			&& SimpleHook((LPVOID)0x14058aa20, (LPVOID)&fOnGetItem, (LPVOID*)&ItemRandomiser->OnGetItemOriginal)
 			&& SimpleHook((LPVOID)0x140e0c690, (LPVOID)&HookedGetActionEventInfoFmg, (LPVOID*)&GetActionEventInfoFmgOriginal)
 			&& SimpleHook(onWorldLoadedAddress.as<LPVOID>(), (LPVOID)&HookedOnWorldLoaded, (LPVOID*)&OnWorldLoadedOriginal)
@@ -119,19 +125,10 @@ BOOL CGameHook::preInitialize() {
 	return false;
 }
 
-BOOL CGameHook::initialize() {
-	Core->Logger("CGameHook::initialize", true, false);
-
-	return true;
-}
-
 BOOL CGameHook::applySettings() {
 	BOOL bReturn = true;
 
-	if (dIsNoWeaponRequirements) { bReturn &= Hook(0x140C073B9, (DWORD64)&tNoWeaponRequirements, &rNoWeaponRequirements, 7); }
-	if (dIsNoSpellsRequirements) { RemoveSpellsRequirements(); }
 	if (dLockEquipSlots) { LockEquipSlots(); }
-	if (dIsNoEquipLoadRequirements) { RemoveEquipLoad(); }
 	if (dEnableDLC) {
 		if (!checkIsDlcOwned()) {
 			Core->Panic("You must own both the ASHES OF ARIANDEL and THE RINGED CITY DLC in order to enable the DLC option in Archipelago", "Missing DLC detected", FE_MissingDLC, 1);
@@ -175,35 +172,25 @@ VOID CGameHook::updateRuntimeValues() {
 }
 
 VOID CGameHook::giveItems() {
-	auto fItemGib = FindPattern(
-		"fItemGib",
-		"8b 31 89 75 a7 8b 41 04 89 44 24 3c 89 45 ab 8b 41 08 89 44 24 38 45 32 ff"
-	).as<void (*)(LPVOID mapItemMan, SItemBuffer * items, int* unknown)>();
+	if (ItemRandomiser->receivedItemsQueue.empty()) return;
 
 	//Send the next item in the list
-	int size = ItemRandomiser->receivedItemsQueue.size();
-	if (size > 0) {
-		Core->Logger("Send an item from the list of items", true, false);
-		SReceivedItem item = ItemRandomiser->receivedItemsQueue.back();
-		if (item.address == 0x40002346) {
-			grantPathOfTheDragon();
-		} else {
-			SItemBuffer items = { 1, {item.address, item.count, -1} };
-			int unknown = 1;
-			fItemGib(*mapItemMan, &items, &unknown);
-		}
+	Core->Logger("Send an item from the list of items", true, false);
+	SReceivedItem item = ItemRandomiser->receivedItemsQueue.back();
+	ItemRandomiser->receivedItemsQueue.pop_back();
+	if (item.address == 0x40002346) {
+		grantPathOfTheDragon();
+	} else {
+		SItemBuffer items = { 1, {item.address, item.count, -1} };
+		int unknown = 1;
+		ItemRandomiser->ItemGibOriginal(*mapItemMan, &items, &unknown);
 	}
+	Core->saveConfigFiles = true;
 }
 
 BOOL CGameHook::isSoulOfCinderDefeated() {
 	constexpr std::uint8_t mask7{ 0b1000'0000 };
 	return isWorldLoaded && (int)(soulOfCinderDefeated & mask7) == 128;
-}
-
-BOOL CGameHook::Hook(DWORD64 qAddress, DWORD64 qDetour, DWORD64* pReturn, DWORD dByteLen) {
-
-	*pReturn = (qAddress + dByteLen);
-	return SimpleHook((LPVOID)qAddress, (LPVOID)qDetour, 0);
 }
 
 BOOL CGameHook::SimpleHook(LPVOID pAddress, LPVOID pDetour, LPVOID* ppOriginal) {
@@ -281,52 +268,9 @@ VOID CGameHook::LockEquipSlots() {
 	return;
 }
 
-// TODO: handle this in the offline randomizer
-VOID CGameHook::RemoveSpellsRequirements() {
-
-	DWORD processId = GetCurrentProcessId();
-	HANDLE hProcess = OpenProcess(PROCESS_ALL_ACCESS, NULL, processId);
-
-	std::vector<unsigned int> offsets = { 0x460, 0x68, 0x68, 0x00 };
-	uintptr_t magicAddr = FindExecutableAddress(0x4782838, offsets); //Param + Magic
-	
-	uintptr_t countAddr = magicAddr + 0x0A;
-	int count = 0;
-	ReadProcessMemory(hProcess, (BYTE*)countAddr, &count, sizeof(char) * 2, nullptr);
-
-	for (int i = 0; i < count; i++) {
-		uintptr_t IDOAddr = magicAddr + 0x48 + 0x18 * i;
-		int IDOBuffer;
-		ReadProcessMemory(hProcess, (BYTE*)IDOAddr, &IDOBuffer, sizeof(IDOBuffer), nullptr);
-
-		uintptr_t spellAddr = magicAddr + IDOBuffer + 0x1E; //Intelligence
-		BYTE newValue = 0x00;
-		WriteProcessMemory(hProcess, (BYTE*)spellAddr, &newValue, sizeof(newValue), nullptr);
-
-		spellAddr = magicAddr + IDOBuffer + 0x1F;	//Faith
-		WriteProcessMemory(hProcess, (BYTE*)spellAddr, &newValue, sizeof(newValue), nullptr);
-	}
-
-	return;
-}
-
-VOID CGameHook::RemoveEquipLoad() {
-
-	DWORD processId = GetCurrentProcessId();
-	HANDLE hProcess = OpenProcess(PROCESS_ALL_ACCESS, NULL, processId);
-
-	std::vector<unsigned int> offsets = { };
-	uintptr_t equipLoadAddr = FindExecutableAddress(0x581FCD, offsets); //EquipLoad 
-	
-	BYTE newValue[4] = {0x0F, (BYTE)0x57, 0xF6, 0x90};
-	WriteProcessMemory(hProcess, (BYTE*)equipLoadAddr, &newValue, sizeof(BYTE) * 4, nullptr);
-
-	return;
-}
-
 VOID CGameHook::showMessage(std::wstring message) {
-	auto fShowBanner = FindPattern("90 48 8b 44 24 30 48 85 c0 75 11", -0x2D)
-		.as<void (*)(UINT_PTR unused, DWORD unknown, ULONGLONG messageId)>;
+	auto fShowBanner = FindPattern("fShowBanner", "90 48 8b 44 24 30 48 85 c0 75 11", -0x2D)
+		.as<void (*)(UINT_PTR unused, DWORD unknown, ULONGLONG messageId)>();
 
 	// The way this works is a bit hacky. DS3 looks up all its user-facing text by ID for localization
 	// purposes, so we show a banner with an unused ID (0x10000000) and hook into the ID function to

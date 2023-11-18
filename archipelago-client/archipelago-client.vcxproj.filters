@@ -514,12 +514,6 @@
     <MASM Include="dinput8_asm.asm">
       <Filter>Fichiers sources\Core</Filter>
     </MASM>
-    <MASM Include="_NoRequirements.asm">
-      <Filter>Fichiers sources\GameHook</Filter>
-    </MASM>
-    <MASM Include="_ItemRandomiser.asm">
-      <Filter>Fichiers sources\GameHook</Filter>
-    </MASM>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="archipelago-client.rc">
