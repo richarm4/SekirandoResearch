@@ -109,8 +109,8 @@ public:
 	int healthPoint = -1, lastHealthPoint = -1;
 	char soulOfCinderDefeated;
 
-	// Whether the game world is currently loaded for the player.
-	BOOL isWorldLoaded = false;
+	// Whether everything the mod needs to access is fully available.
+	virtual BOOL isEverythingLoaded();
 
 	// Displays a banner message to the player. Only works if they're in an active game, not on the
 	// menu.
@@ -141,12 +141,15 @@ private:
 	static uintptr_t FindExecutableAddress(uintptr_t ptrOffset, std::vector<unsigned int> offsets);
 	static uintptr_t GetModuleBaseAddress();
 	static uintptr_t FindDMAAddy(HANDLE hProc, uintptr_t ptr, std::vector<unsigned int> offsets);
-	static BOOL Hook(DWORD64 qAddress, DWORD64 qDetour, DWORD64* pReturn, DWORD dByteLen);
 	static BOOL SimpleHook(LPVOID pAddress, LPVOID pDetour, LPVOID* ppOriginal);
 	static VOID LockEquipSlots();
 	static VOID killThePlayer();
 	static const wchar_t* HookedGetActionEventInfoFmg(LPVOID messages, DWORD messageId);
 	BOOL checkIsDlcOwned();
+	
+	// Whether the world is loaded. This doesn't *necessarily* mean that everything we need is
+	// accessible; for that, check isEverythingLoaded.
+	BOOL isWorldLoaded;
 
 	// A hooked function that's run after the data has been loaded for the current game world.
 	static LPVOID HookedOnWorldLoaded(ULONGLONG unknown1, ULONGLONG unknown2, DWORD unknown3,

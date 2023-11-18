@@ -79,7 +79,7 @@ VOID CCore::Run() {
 
 	ArchipelagoInterface->update();
 
-	if (GameHook->isWorldLoaded) {
+	if (GameHook->isEverythingLoaded()) {
 		GameHook->updateRuntimeValues();
 
 		if (!isInit && ArchipelagoInterface->isConnected() && initProtectionDelay <= 0) {

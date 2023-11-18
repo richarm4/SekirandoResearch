@@ -125,6 +125,20 @@ BOOL CGameHook::initialize() {
 	return false;
 }
 
+BOOL CGameHook::isEverythingLoaded() {
+	if (!isWorldLoaded) return false;
+
+	auto mainCharacter = WorldChrMan::instance()->mainCharacter;
+	if (!mainCharacter) return false;
+	auto container = mainCharacter->container;
+	if (!container || !container->dataModule) return false;
+
+	if (!SprjEventFlagMan::instance()->worldFlags) return false;
+	if (!GameDataMan::instance()->localPlayerData) return false;
+
+	return true;
+}
+
 BOOL CGameHook::applySettings() {
 	BOOL bReturn = true;
 
@@ -190,7 +204,7 @@ VOID CGameHook::giveItems() {
 
 BOOL CGameHook::isSoulOfCinderDefeated() {
 	constexpr std::uint8_t mask7{ 0b1000'0000 };
-	return isWorldLoaded && (int)(soulOfCinderDefeated & mask7) == 128;
+	return isEverythingLoaded() && (int)(soulOfCinderDefeated & mask7) == 128;
 }
 
 BOOL CGameHook::SimpleHook(LPVOID pAddress, LPVOID pDetour, LPVOID* ppOriginal) {
