@@ -335,4 +335,19 @@ VOID CCore::Logger(std::string logMessage, BOOL inFile, BOOL inConsole) {
 	}
 }
 
+BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved) {
+
+	switch (fdwReason)
+	{
+	case DLL_PROCESS_ATTACH:
+
+		DisableThreadLibraryCalls(hinstDLL);
+		CreateThread(0, 0, (LPTHREAD_START_ROUTINE)CCore::Start, 0, 0, 0);
+
+		break;
+	}
+
+	return TRUE;
+
+}
 

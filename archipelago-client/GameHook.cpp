@@ -44,8 +44,8 @@ LPVOID* mapItemMan =
 // Archipelago and to hook into to inspect items the player picks up.
 auto fItemGib = FindPattern(
 	"fItemGib",
-	"8b 31 89 75 a7 8b 41 04 89 44 24 3c 89 45 ab 8b 41 08 89 44 24 38 45 32 ff",
-	-0x64 // TODO: this is wrong for 1.15.2, find a different AoB
+	"48 8d 6c 24 d9 48 81 ec 00 01 00 00 48 c7 45 cf fe ff ff ff",
+	-0x10
 ).as<ItemGibType>();
 
 // The internal DS3 function that looks up the current localization's message for the given ID. We
@@ -101,12 +101,17 @@ BOOL CGameHook::initialize() {
 		return false;
 	}
 
+	auto onGetitemAddress = FindPattern("OnGetItem",
+		"40 57 48 83 ec 40 48 c7 44 24 38 fe ff ff ff 48 89 5c 24 50 48 89 74 24 58");
+
+	auto getActionEventInfoFmgAddress =
+		FindPattern("getActionEventInfoFmg", "44 8b ca 33 d2 44 8d 42 65", -0xc);
+
 	auto onWorldLoadedAddress = FindPattern(
 		"OnWorldLoaded",
 		"0f 10 00 0f 29 44 24 50 0f 10 48 10 0f 29 4c 24 60 0f 10 40 20 0f 29 44 24 70 0f 10 48 "
 		"30 0f 29 8c 24 80 00 00 00",
 		-0x60);
-	if (!onWorldLoadedAddress) return false;
 	
 	auto onWorldUnloadedAddress = FindPattern(
 		"OnWorldUnloaded",
@@ -115,8 +120,8 @@ BOOL CGameHook::initialize() {
 
 	try {
 		return SimpleHook((LPVOID)fItemGib, (LPVOID)&HookedItemGib, (LPVOID*)&ItemRandomiser->ItemGibOriginal)
-			&& SimpleHook((LPVOID)0x14058aa20, (LPVOID)&fOnGetItem, (LPVOID*)&ItemRandomiser->OnGetItemOriginal)
-			&& SimpleHook((LPVOID)0x140e0c690, (LPVOID)&HookedGetActionEventInfoFmg, (LPVOID*)&GetActionEventInfoFmgOriginal)
+			&& SimpleHook(onGetitemAddress.as<LPVOID>(), (LPVOID)&HookedOnGetItem, (LPVOID*)&ItemRandomiser->OnGetItemOriginal)
+			&& SimpleHook(getActionEventInfoFmgAddress.as<LPVOID>(), (LPVOID)&HookedGetActionEventInfoFmg, (LPVOID*)&GetActionEventInfoFmgOriginal)
 			&& SimpleHook(onWorldLoadedAddress.as<LPVOID>(), (LPVOID)&HookedOnWorldLoaded, (LPVOID*)&OnWorldLoadedOriginal)
 			&& SimpleHook(onWorldUnloadedAddress.as<LPVOID>(), (LPVOID)&HookedOnWorldUnloaded, (LPVOID*)&OnWorldUnloadedOriginal);
 	} catch (const std::exception&) {
@@ -287,10 +292,10 @@ VOID CGameHook::showMessage(std::wstring message) {
 		.as<void (*)(UINT_PTR unused, DWORD unknown, ULONGLONG messageId)>();
 
 	// The way this works is a bit hacky. DS3 looks up all its user-facing text by ID for localization
-	// purposes, so we show a banner with an unused ID (0x10000000) and hook into the ID function to
+	// purposes, so we show a banner with an unused ID (0x10001312) and hook into the ID function to
 	// return the value of nextMessageToSend. Ideally we'd be able to just set up a 
 	nextMessageToSend = message;
-	fShowBanner(NULL, 1, 0x10000000);
+	fShowBanner(NULL, 1, 0x10001312);
 	nextMessageToSend = std::wstring();
 }
 
@@ -355,9 +360,12 @@ mem::pointer FindPattern(const char* name, const char* pattern, ptrdiff_t offset
 	});
 
 	if (!result) {
-		std::ostringstream stream;
-		stream << "Failed to find pattern for " << name;
-		Core->Panic(stream.str().c_str(), "Missing pattern", FE_PatternFailed, true);
+		Core->Panic(
+			std::format(
+				"Failed to find pattern for {}. This probably means you're using an "
+				"unsupported Dark Souls III patch. 1.15.0 and 1.15.2 are known to be supported.",
+				name).c_str(),
+			"Missing pattern", FE_PatternFailed, true);
 		return mem::pointer();
 	}
 	return result;
@@ -371,7 +379,7 @@ static mem::pointer ResolveMov(mem::pointer pointer) {
 
 const wchar_t* CGameHook::HookedGetActionEventInfoFmg(LPVOID messages, DWORD messageId) {
 	switch (messageId) {
-	case 0x10000000:
+	case 0x10001312:
 		if (GameHook->nextMessageToSend.length() > 0) {
 			return GameHook->nextMessageToSend.c_str();
 		}

@@ -78,7 +78,7 @@ VOID CItemRandomiser::RandomiseItem(WorldChrMan* qWorldChrMan, SItemBuffer* pIte
 // This function is called once each time the player receives an item with an ID they don't already
 // have in their inventory. It's called _after_ fItemRandomiser, so it'll only see the items that
 // that has replaced.
-ULONGLONG fOnGetItem(UINT_PTR pEquipInventoryData, DWORD qItemCategory, DWORD qItemID, DWORD qCount, UINT_PTR qUnknown2) {
+ULONGLONG HookedOnGetItem(UINT_PTR pEquipInventoryData, DWORD qItemCategory, DWORD qItemID, DWORD qCount, UINT_PTR qUnknown2) {
 	// This function is frequently called with very high item IDs while the game is loading
 	// for unclear reasons. We want to ignore those calls.
 	if (qItemCategory == 0x40000000 && qItemID > 3780000 && qItemID < 0xffffffU) {

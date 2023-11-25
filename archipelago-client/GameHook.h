@@ -213,4 +213,4 @@ extern "C" DWORD64 qItemEquipComms;
 
 extern "C" VOID HookedItemGib(WorldChrMan* qWorldChrMan, SItemBuffer* pItemBuffer, LPVOID pItemData);
 
-extern "C" ULONGLONG fOnGetItem(UINT_PTR pEquipInventoryData, DWORD qItemCategory, DWORD qItemID, DWORD qCount, UINT_PTR qUnknown2);
+extern "C" ULONGLONG HookedOnGetItem(UINT_PTR pEquipInventoryData, DWORD qItemCategory, DWORD qItemID, DWORD qCount, UINT_PTR qUnknown2);

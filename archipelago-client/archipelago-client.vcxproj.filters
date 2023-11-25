@@ -45,9 +45,6 @@
     <ClCompile Include="Core.cpp">
       <Filter>Fichiers sources\Core</Filter>
     </ClCompile>
-    <ClCompile Include="dinput8.cpp">
-      <Filter>Fichiers sources\Core</Filter>
-    </ClCompile>
     <ClCompile Include="ItemRandomiser.cpp">
       <Filter>Fichiers sources\GameHook</Filter>
     </ClCompile>
@@ -505,15 +502,10 @@
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <None Include="dinput8.def">
+    <None Include="Core.def">
       <Filter>Fichiers sources\Core</Filter>
     </None>
     <None Include="subprojects\mem\include\mem\cpp.hint" />
-  </ItemGroup>
-  <ItemGroup>
-    <MASM Include="dinput8_asm.asm">
-      <Filter>Fichiers sources\Core</Filter>
-    </MASM>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="archipelago-client.rc">
