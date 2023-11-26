@@ -124,7 +124,7 @@ VOID CCore::Run() {
 			}
 		} else if (initProtectionDelay > 0) {
 			int secondsRemaining = (RUN_SLEEP / 1000) * initProtectionDelay;
-			spdlog::info("The mod will be initialized in {} seconds\n", secondsRemaining);
+			spdlog::info("The mod will be initialized in {} seconds", secondsRemaining);
 			initProtectionDelay--;
 		}
 	}
