@@ -17,7 +17,7 @@
 #include <tlhelp32.h>
 #include <stdio.h>
 #include <functional>
-#include "./subprojects/json/include/nlohmann/json.hpp"
+#include <nlohmann/json.hpp>
 #include "ArchipelagoInterface.h"
 
 #define int3 __debugbreak();

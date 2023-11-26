@@ -1,0 +1,11 @@
+{
+  "name": "dark-souls-iii-archipelago-client",
+  "version-string": "2.0.0",
+  "dependencies": [
+    "asio",
+    "nlohmann-json",
+    "valijson",
+    "websocketpp"
+  ],
+  "builtin-baseline": "cd5e746ec203c8c3c61647e0886a8df8c1e78e41"
+}
