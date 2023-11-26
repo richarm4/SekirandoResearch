@@ -49,21 +49,7 @@ auto fItemGib = FindPattern(
 	"fItemGib",
 	"48 8d 6c 24 d9 48 81 ec 00 01 00 00 48 c7 45 cf fe ff ff ff",
 	-0x10
-).as<ItemGibType>();
-
-// The internal DS3 function that looks up the current localization's message for the given ID. We
-// override this to support custom messages with custom IDs.
-wchar_t* (*GetActionEventInfoFmgOriginal)(LPVOID messages, DWORD messageId);
-
-// The function that allocates a bunch of in-game singletons like WorldChrMan. Once this runs, it's
-// generally safe to make in-game changes.
-LPVOID (*OnWorldLoadedOriginal)(ULONGLONG unknown1, ULONGLONG unknown2, DWORD unknown3,
-	DWORD unknown4, DWORD unknown5);
-
-// The deallocator dual of OnWorldLoadedOriginal. Once this runs, it's no longer safe to make
-// in-game changes.
-void (*OnWorldUnloadedOriginal)(ULONGLONG unknown1, ULONGLONG unknown2, ULONGLONG unknown3,
-	ULONGLONG unknown4);
+).as<decltype(&CItemRandomiser::HookedItemGib)>();
 
 // A singleton class with informatino about installed DLCs.
 struct CSDlc : public FD4Singleton<CSDlc, "CSDlc"> {
@@ -122,11 +108,16 @@ BOOL CGameHook::initialize() {
 		-0x14);
 
 	try {
-		return SimpleHook((LPVOID)fItemGib, (LPVOID)&HookedItemGib, (LPVOID*)&ItemRandomiser->ItemGibOriginal)
-			&& SimpleHook(onGetitemAddress.as<LPVOID>(), (LPVOID)&HookedOnGetItem, (LPVOID*)&ItemRandomiser->OnGetItemOriginal)
-			&& SimpleHook(getActionEventInfoFmgAddress.as<LPVOID>(), (LPVOID)&HookedGetActionEventInfoFmg, (LPVOID*)&GetActionEventInfoFmgOriginal)
-			&& SimpleHook(onWorldLoadedAddress.as<LPVOID>(), (LPVOID)&HookedOnWorldLoaded, (LPVOID*)&OnWorldLoadedOriginal)
-			&& SimpleHook(onWorldUnloadedAddress.as<LPVOID>(), (LPVOID)&HookedOnWorldUnloaded, (LPVOID*)&OnWorldUnloadedOriginal);
+		return SimpleHook((LPVOID)fItemGib, (LPVOID)&CItemRandomiser::HookedItemGib,
+				(LPVOID*)&ItemRandomiser->ItemGibOriginal)
+			&& SimpleHook(onGetitemAddress.as<LPVOID>(), (LPVOID)&CItemRandomiser::HookedOnGetItem,
+				(LPVOID*)&ItemRandomiser->OnGetItemOriginal)
+			&& SimpleHook(getActionEventInfoFmgAddress.as<LPVOID>(), (LPVOID)&HookedGetActionEventInfoFmg,
+				(LPVOID*)&GameHook->GetActionEventInfoFmgOriginal)
+			&& SimpleHook(onWorldLoadedAddress.as<LPVOID>(), (LPVOID)&HookedOnWorldLoaded,
+				(LPVOID*)&GameHook->OnWorldLoadedOriginal)
+			&& SimpleHook(onWorldUnloadedAddress.as<LPVOID>(), (LPVOID)&HookedOnWorldUnloaded,
+				(LPVOID*)&GameHook->OnWorldUnloadedOriginal);
 	} catch (const std::exception&) {
 		spdlog::error("Cannot hook the game");
 	}
@@ -331,7 +322,7 @@ BOOL CGameHook::checkIsDlcOwned() {
 
 LPVOID CGameHook::HookedOnWorldLoaded(ULONGLONG unknown1, ULONGLONG unknown2, DWORD unknown3,
 	DWORD unknown4, DWORD unknown5) {
-	auto result = OnWorldLoadedOriginal(unknown1, unknown2, unknown3, unknown4, unknown5);
+	auto result = GameHook->OnWorldLoadedOriginal(unknown1, unknown2, unknown3, unknown4, unknown5);
 	GameHook->isWorldLoaded = true;
 	return result;
 }
@@ -339,7 +330,7 @@ LPVOID CGameHook::HookedOnWorldLoaded(ULONGLONG unknown1, ULONGLONG unknown2, DW
 void CGameHook::HookedOnWorldUnloaded(ULONGLONG unknown1, ULONGLONG unknown2, ULONGLONG unknown3,
 		ULONGLONG unknown4) {
 	GameHook->isWorldLoaded = false;
-	OnWorldUnloadedOriginal(unknown1, unknown2, unknown3, unknown4);
+	GameHook->OnWorldUnloadedOriginal(unknown1, unknown2, unknown3, unknown4);
 }
 
 mem::pointer FindPattern(const char* name, const char* pattern, ptrdiff_t offset) {
@@ -384,5 +375,5 @@ const wchar_t* CGameHook::HookedGetActionEventInfoFmg(LPVOID messages, DWORD mes
 			return L"[AP mod bug: nextMessageToSend not set]";
 		}
 	}
-	return GetActionEventInfoFmgOriginal(messages, messageId);
+	return GameHook->GetActionEventInfoFmgOriginal(messages, messageId);
 }

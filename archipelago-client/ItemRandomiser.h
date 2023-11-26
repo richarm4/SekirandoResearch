@@ -14,14 +14,19 @@ struct SReceivedItem {
 
 class CItemRandomiser {
 public:
-	virtual VOID RandomiseItem(WorldChrMan* qWorldChrMan, SItemBuffer* pItemBuffer, LPVOID pItemData);
-	virtual VOID OnGetSyntheticItem(EquipParamGoodsRow* row);
+	static void __cdecl HookedItemGib(void* mapItemMan, SItemBuffer* pItemBuffer, int32_t* pItemData);
+	static uint64_t __cdecl HookedOnGetItem(void* pEquipInventoryData, uint32_t qItemCategory, uint32_t qItemID, uint32_t qCount, void* qUnknown2);
+
+	decltype(&HookedItemGib) ItemGibOriginal;
+	decltype(&HookedOnGetItem) OnGetItemOriginal;
 
 	DWORD dIsAutoEquip;
-	ItemGibType ItemGibOriginal;
-	OnGetItemType OnGetItemOriginal;
 	std::map<DWORD, DWORD> pApItemsToItemIds = { };
 	std::map<DWORD, DWORD> pItemCounts = { };
 	std::deque<SReceivedItem> receivedItemsQueue = { };
 	std::list<int64_t> checkedLocationsList = { };
+
+private:
+	virtual VOID RandomiseItem(SItemBuffer* pItemBuffer);
+	virtual VOID OnGetSyntheticItem(EquipParamGoodsRow* row);
 };

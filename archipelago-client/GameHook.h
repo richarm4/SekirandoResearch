@@ -6,9 +6,6 @@
 #include "mem/mem.h"
 #include "./subprojects/minhook/include/MinHook.h"
 
-typedef ULONGLONG (*OnGetItemType)(UINT_PTR, DWORD, DWORD, DWORD, UINT_PTR);
-typedef void (*ItemGibType)(LPVOID, SItemBuffer*, LPVOID);
-
 class CGameHook {
 public:
 	virtual BOOL initialize();
@@ -55,12 +52,14 @@ private:
 	static BOOL SimpleHook(LPVOID pAddress, LPVOID pDetour, LPVOID* ppOriginal);
 	static VOID LockEquipSlots();
 	static VOID killThePlayer();
-	static const wchar_t* HookedGetActionEventInfoFmg(LPVOID messages, DWORD messageId);
 	BOOL checkIsDlcOwned();
 	
 	// Whether the world is loaded. This doesn't *necessarily* mean that everything we need is
 	// accessible; for that, check isEverythingLoaded.
 	BOOL isWorldLoaded;
+
+	// A hooked function that's run when the game requests a message to display.
+	static const wchar_t* HookedGetActionEventInfoFmg(LPVOID messages, DWORD messageId);
 
 	// A hooked function that's run after the data has been loaded for the current game world.
 	static LPVOID HookedOnWorldLoaded(ULONGLONG unknown1, ULONGLONG unknown2, DWORD unknown3,
@@ -69,6 +68,18 @@ private:
 	// A hooked function that's run to unload data for the current game world.
 	static void HookedOnWorldUnloaded(ULONGLONG unknown1, ULONGLONG unknown2, ULONGLONG unknown3,
 		ULONGLONG unknown4);
+
+	// The internal DS3 function that looks up the current localization's message for the given ID. We
+	// override this to support custom messages with custom IDs.
+	decltype(&HookedGetActionEventInfoFmg) GetActionEventInfoFmgOriginal;
+
+	// The function that allocates a bunch of in-game singletons like WorldChrMan. Once this runs, it's
+	// generally safe to make in-game changes.
+	decltype(&HookedOnWorldLoaded) OnWorldLoadedOriginal;
+
+	// The deallocator dual of OnWorldLoadedOriginal. Once this runs, it's no longer safe to make
+	// in-game changes.
+	decltype(&HookedOnWorldUnloaded) OnWorldUnloadedOriginal;
 	
 	uintptr_t BaseB = -1;
 	uintptr_t GameFlagData = -1;
@@ -91,9 +102,3 @@ static mem::pointer FindPattern(const char* name, const char* pattern, ptrdiff_t
 // Given a pointer to the beginning of a MOV instruction whose argument is a relative offset,
 // returns the address that offset is pointing to.
 static mem::pointer ResolveMov(mem::pointer pointer);
-
-extern "C" DWORD64 qItemEquipComms;
-
-extern "C" VOID HookedItemGib(WorldChrMan* qWorldChrMan, SItemBuffer* pItemBuffer, LPVOID pItemData);
-
-extern "C" ULONGLONG HookedOnGetItem(UINT_PTR pEquipInventoryData, DWORD qItemCategory, DWORD qItemID, DWORD qCount, UINT_PTR qUnknown2);

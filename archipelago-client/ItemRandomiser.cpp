@@ -10,20 +10,20 @@ extern CItemRandomiser* ItemRandomiser;
 extern CGameHook* GameHook;
 extern CAutoEquip* AutoEquip;
 
-VOID HookedItemGib(WorldChrMan* qWorldChrMan, SItemBuffer* pItemBuffer, LPVOID pItemData) {
+void CItemRandomiser::HookedItemGib(void* mapItemMan, SItemBuffer* pItemBuffer, int32_t* pItemData) {
 
 	// TODO: This check excludes pickle pee items but also dropped items, which may be desirable
 	// for auto-equip mode. Figure out whether to remove it.
-	if (*(int*)(pItemData) >= 0) {
-		ItemRandomiser->RandomiseItem(qWorldChrMan, pItemBuffer, pItemData);
+	if (*pItemData >= 0) {
+		ItemRandomiser->RandomiseItem(pItemBuffer);
 		if (ItemRandomiser->dIsAutoEquip) AutoEquip->AutoEquipItem(pItemBuffer);
 	}
 
-	ItemRandomiser->ItemGibOriginal(qWorldChrMan, pItemBuffer, pItemData);
+	ItemRandomiser->ItemGibOriginal(mapItemMan, pItemBuffer, pItemData);
 }
 
 
-VOID CItemRandomiser::RandomiseItem(WorldChrMan* qWorldChrMan, SItemBuffer* pItemBuffer, LPVOID pItemData) {
+VOID CItemRandomiser::RandomiseItem(SItemBuffer* pItemBuffer) {
 
 	if (pItemBuffer->length > 6) {
 		Core->Panic("Too many items!", "...\\Source\\ItemRandomiser\\ItemRandomiser.cpp", FE_AmountTooHigh, 1);
@@ -77,7 +77,8 @@ VOID CItemRandomiser::RandomiseItem(WorldChrMan* qWorldChrMan, SItemBuffer* pIte
 // This function is called once each time the player receives an item with an ID they don't already
 // have in their inventory. It's called _after_ fItemRandomiser, so it'll only see the items that
 // that has replaced.
-ULONGLONG HookedOnGetItem(UINT_PTR pEquipInventoryData, DWORD qItemCategory, DWORD qItemID, DWORD qCount, UINT_PTR qUnknown2) {
+uint64_t CItemRandomiser::HookedOnGetItem(void* pEquipInventoryData, uint32_t qItemCategory,
+		uint32_t qItemID, uint32_t qCount, void* qUnknown2) {
 	// This function is frequently called with very high item IDs while the game is loading
 	// for unclear reasons. We want to ignore those calls.
 	if (qItemCategory == 0x40000000 && qItemID > 3780000 && qItemID < 0xffffffU) {
