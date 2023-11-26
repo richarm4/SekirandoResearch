@@ -1,3 +1,4 @@
+#include "AutoEquip.h"
 #include "GameHook.h"
 
 extern CCore* Core;
@@ -5,10 +6,10 @@ extern CAutoEquip* AutoEquip;
 extern CGameHook* GameHook;
 
 EquipSlot dRingSlotSelect = EquipSlot::ring1;
-DWORD pHelmetList[110];
-DWORD pBodyList[105];
-DWORD pHandsList[100];
-DWORD pLegsList[105];
+uint32_t pHelmetList[110];
+uint32_t pBodyList[105];
+uint32_t pHandsList[100];
+uint32_t pLegsList[105];
 
 VOID CAutoEquip::AutoEquipItem(SItemBuffer* pItemBuffer) {
 
@@ -43,16 +44,16 @@ VOID CAutoEquip::AutoEquipItem(SItemBuffer* pItemBuffer) {
 	return;
 };
 
-std::optional<EquipSlot> CAutoEquip::SortItem(DWORD dItemID) {
+std::optional<EquipSlot> CAutoEquip::SortItem(uint32_t dItemID) {
 
-	DWORD dItemType = (dItemID >> 0x1C);
+	auto dItemType = (ItemType)(dItemID >> 0x1C);
 	switch (dItemType) {
-		case(ItemType_Weapon): {
+		case ItemType::weapon: {
 			if ((dItemID >> 0x10) == 6) return std::nullopt; //Don't equip ammo
 			if ((dItemID & 0xFF000000) << 4 != 0x10000000) return EquipSlot::rightHand1;
 			break;
 		};
-		case(ItemType_Protector): {
+		case ItemType::protector: {
 			if (FindEquipType(dItemID, &pHelmetList[0])) return EquipSlot::head;
 			else if (FindEquipType(dItemID, &pBodyList[0])) return EquipSlot::body;
 			else if (FindEquipType(dItemID, &pHandsList[0])) return EquipSlot::arms;
@@ -60,24 +61,24 @@ std::optional<EquipSlot> CAutoEquip::SortItem(DWORD dItemID) {
 			else return std::nullopt;
 			break;
 		};
-		case(ItemType_Accessory): {
+		case ItemType::accessory: {
 			if ((dItemID & 0xFFFFFF00) == 0x20002700) return std::nullopt; //It's a covenant item
 			if (dRingSlotSelect > EquipSlot::ring4) dRingSlotSelect = EquipSlot::ring1;
 			EquipSlot result = dRingSlotSelect;
-			dRingSlotSelect = static_cast<EquipSlot>(static_cast<DWORD>(dRingSlotSelect) + 1);
+			dRingSlotSelect = static_cast<EquipSlot>(static_cast<uint32_t>(dRingSlotSelect) + 1);
 			return result;
 		};
-		case(ItemType_Goods): return std::nullopt;
+		case ItemType::goods: return std::nullopt;
 		default: {
 			std::ostringstream stream;
-			stream << "Invalid item type: " << dItemType << " (" << std::hex << dItemID << ")";
+			stream << "Invalid item type: " << ((uint32_t)dItemType) << " (" << std::hex << dItemID << ")";
 			Core->Panic(stream.str().c_str(), "...\\Source\\AutoEquip\\AutoEquip.cpp", HE_InvalidItemType, 0);
 			return std::nullopt;
 		};
 	};
 };
 
-BOOL CAutoEquip::FindEquipType(DWORD dItem, DWORD* pArray) {
+bool CAutoEquip::FindEquipType(uint32_t dItem, uint32_t* pArray) {
 
 	int i = 0;
 
@@ -94,9 +95,9 @@ BOOL CAutoEquip::FindEquipType(DWORD dItem, DWORD* pArray) {
 	return false;
 };
 
-DWORD CAutoEquip::GetInventorySlotID(DWORD dItemID) {
+uint32_t CAutoEquip::GetInventorySlotID(uint32_t dItemID) {
 
-	DWORD dInventoryID = 0;
+	uint32_t dInventoryID = 0;
 	UINT_PTR qInventoryScanPtr = 0;
 
 	auto qInventoryPtr = (UINT_PTR)GameDataMan::instance()->localPlayerData;
@@ -104,13 +105,13 @@ DWORD CAutoEquip::GetInventorySlotID(DWORD dItemID) {
 	qInventoryPtr = *(UINT_PTR*)(qInventoryPtr + 0x10);
 	qInventoryPtr += 0x1B8;
 
-	while (dInventoryID < *(DWORD*)(qInventoryPtr + 0x04)) {
+	while (dInventoryID < *(uint32_t*)(qInventoryPtr + 0x04)) {
 	
 		qInventoryScanPtr = (dInventoryID << 0x04);
 		qInventoryScanPtr += *(UINT_PTR*)(qInventoryPtr + 0x38);
 
-		if (*(DWORD*)(qInventoryScanPtr + 0x04) == dItemID) {
-			return (dInventoryID + *(DWORD*)(qInventoryPtr + 0x14));
+		if (*(uint32_t*)(qInventoryScanPtr + 0x04) == dItemID) {
+			return (dInventoryID + *(uint32_t*)(qInventoryPtr + 0x14));
 		};
 	
 		dInventoryID++;
@@ -127,7 +128,7 @@ VOID CAutoEquip::LockUnlockEquipSlots(int iIsUnlock) {
 
 };
 
-extern DWORD pHelmetList[110]{
+extern uint32_t pHelmetList[110]{
 
 	0x14ADD0A0,
 	0x14153A20,
@@ -240,7 +241,7 @@ extern DWORD pHelmetList[110]{
 
 };		  //All in-game headwear
 
-extern DWORD pBodyList[105]{
+extern uint32_t pBodyList[105]{
 
 	0x14B575A8,
 	0x15204568,
@@ -349,7 +350,7 @@ extern DWORD pBodyList[105]{
 
 };		  //All in-game chestpieces
 
-extern DWORD pHandsList[100]{
+extern uint32_t pHandsList[100]{
 
 	0x149E9630,
 	0x1121F290,
@@ -445,7 +446,7 @@ extern DWORD pHandsList[100]{
 	0x00000000,
 };
 
-extern DWORD pLegsList[105]{
+extern uint32_t pLegsList[105]{
 
 	0x1121F678,
 	0x11299798,

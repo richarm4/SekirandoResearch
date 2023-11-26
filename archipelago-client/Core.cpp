@@ -1,8 +1,10 @@
 #include <spdlog/sinks/basic_file_sink.h>
 #include <spdlog/sinks/wincolor_sink.h>
 
+#include "AutoEquip.h"
 #include "Core.h"
 #include "GameHook.h"
+#include "ItemRandomiser.h"
 
 CCore* Core;
 CGameHook* GameHook;

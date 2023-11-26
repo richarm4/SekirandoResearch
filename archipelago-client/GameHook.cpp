@@ -1,6 +1,7 @@
 #include <spdlog/spdlog.h>
 
 #include "GameHook.h"
+#include "ItemRandomiser.h"
 
 #include "mem/module.h"
 #include "mem/pattern.h"

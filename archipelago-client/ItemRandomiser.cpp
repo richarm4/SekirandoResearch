@@ -1,6 +1,9 @@
+#include <functional>
+
+#include "AutoEquip.h"
 #include "Core.h"
 #include "GameHook.h"
-#include <functional>
+#include "ItemRandomiser.h"
 
 extern CCore* Core;
 extern CItemRandomiser* ItemRandomiser;

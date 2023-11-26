@@ -2,6 +2,7 @@
 #include <spdlog/spdlog.h>
 
 #include "ArchipelagoInterface.h"
+#include "ItemRandomiser.h"
 
 #ifdef __EMSCRIPTEN__
 #define DATAPACKAGE_CACHE "/settings/datapackage.json"

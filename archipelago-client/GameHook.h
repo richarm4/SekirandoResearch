@@ -1,99 +1,10 @@
 #pragma once
+
 #include "Core.h"
+#include "GameTypes.h"
 #include "Params.h"
 #include "mem/mem.h"
 #include "./subprojects/minhook/include/MinHook.h"
-
-#define ItemType_Weapon 0
-#define ItemType_Protector 1
-#define ItemType_Accessory 2
-#define ItemType_Goods 4
-
-// A struct representing an item received from another world.
-struct SReceivedItem {
-	// The Dark Souls 3 ID for this item.
-	DWORD address;
-
-	// The number of copies of this item that were received.
-	DWORD count;
-};
-
-// Constant values used to represent different equip slots in the DS3 inventory.
-enum class EquipSlot: DWORD {
-	rightHand1 = 0x01,
-	head = 0x0C,
-	body = 0x0D,
-	arms = 0x0E,
-	legs = 0x0E,
-	ring1 = 0x11,
-	ring2 = 0x12,
-	ring3 = 0x13,
-	ring4 = 0x14,
-};
-
-// A Dark Souls 3 struct representing a single item granted to the player.
-struct SItemBufferEntry {
-	// The DS3 ID of the item being granted.
-	DWORD id;
-
-	// The number of items being granted.
-	DWORD quantity;
-
-	// The durability of the items being granted. -1 means full durability.
-	int durability;
-};
-
-// A Dark Souls 3 struct representing a set of items granted to the player.
-struct SItemBuffer {
-	// The number of items in this buffer.
-	DWORD length;
-
-	// The set of items in this buffer.
-	SItemBufferEntry items[];
-};
-
-// A Dark Souls 3 struct containing information about the current character's available actions.
-struct SSprjChrActionFlagModule {
-	uint8_t unk00[0x10];
-	DWORD chrEquipAnimFlags;
-};
-
-// A Dark Souls 3 struct containing information about the current character.
-struct SSprjChrDataModule {
-	uint8_t unk00[0xD8];
-
-	// The character's HP.
-	int hp;
-};
-
-// A Dark Souls 3 struct containing various SPRJ modules.
-struct SChrInsComponentContainer {
-	SSprjChrActionFlagModule* actionModule;
-	uint8_t unk00[0x10];
-	SSprjChrDataModule* dataModule;
-};
-
-// A Dark Souls 3 struct containing information about the current play session.
-struct SPlayerIns {
-	uint8_t unk00[0x1F90];
-	SChrInsComponentContainer* container;
-};
-
-// A singleton class containing information about the current play session.
-struct WorldChrMan : public FD4Singleton<WorldChrMan, "WorldChrMan"> {
-	void** vftable_ptr;
-	uint8_t unk00[0x78];
-	SPlayerIns* mainCharacter;
-};
-
-// A singleton class containing information about the current game world.
-struct GameDataMan {
-	void** vftable_ptr;
-	DWORD unk00;
-	LPVOID localPlayerData;
-
-	static GameDataMan* instance();
-};
 
 typedef ULONGLONG (*OnGetItemType)(UINT_PTR, DWORD, DWORD, DWORD, UINT_PTR);
 typedef void (*ItemGibType)(LPVOID, SItemBuffer*, LPVOID);
@@ -159,8 +70,6 @@ private:
 	static void HookedOnWorldUnloaded(ULONGLONG unknown1, ULONGLONG unknown2, ULONGLONG unknown3,
 		ULONGLONG unknown4);
 	
-
-	
 	uintptr_t BaseB = -1;
 	uintptr_t GameFlagData = -1;
 	uintptr_t Param = -1;
@@ -170,32 +79,6 @@ private:
 	// thread-safe, but that shouldn't be an issue as long as we only display banners from the main
 	// archipelago thread.
 	std::wstring nextMessageToSend;
-};
-
-class CItemRandomiser {
-public:
-	virtual VOID RandomiseItem(WorldChrMan* qWorldChrMan, SItemBuffer* pItemBuffer, LPVOID pItemData);
-	virtual VOID OnGetSyntheticItem(EquipParamGoodsRow* row);
-
-	DWORD dIsAutoEquip;
-	ItemGibType ItemGibOriginal;
-	OnGetItemType OnGetItemOriginal;
-	std::map<DWORD, DWORD> pApItemsToItemIds = { };
-	std::map<DWORD, DWORD> pItemCounts = { };
-	std::deque<SReceivedItem> receivedItemsQueue = { };
-	std::list<int64_t> checkedLocationsList = { };
-};
-
-class CAutoEquip {
-public:
-	virtual VOID AutoEquipItem(SItemBuffer* pItemBuffer);
-	virtual BOOL FindEquipType(DWORD dItem, DWORD* pArray);
-	virtual DWORD GetInventorySlotID(DWORD dItemID);
-	virtual VOID LockUnlockEquipSlots(int iIsUnlock);
-
-	// Returns the equip slot for the given item ID, or std::nullopt if the item shouldn't be
-	// auto-equipped.
-	std::optional<EquipSlot> SortItem(DWORD dItemID);
 };
 
 // Returns a pointer to the location of the given memory pattern in the current executable, or
