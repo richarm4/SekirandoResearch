@@ -1,3 +1,5 @@
+#include <spdlog/spdlog.h>
+
 #include "GameHook.h"
 
 #include "mem/module.h"
@@ -92,12 +94,12 @@ GameDataMan* GameDataMan::instance() {
 
 // Hook the functions necessary to customize game behavior.
 BOOL CGameHook::initialize() {
-	Core->Logger("CGameHook::preInitialize", true, false);
+	spdlog::debug("CGameHook::preInitialize");
 
 	try {
 		if (MH_Initialize() != MH_OK) return false;
 	} catch (const std::exception&) {
-		Core->Logger("Cannot initialize MinHook");
+		spdlog::error("Cannot initialize MinHook");
 		return false;
 	}
 
@@ -125,7 +127,7 @@ BOOL CGameHook::initialize() {
 			&& SimpleHook(onWorldLoadedAddress.as<LPVOID>(), (LPVOID)&HookedOnWorldLoaded, (LPVOID*)&OnWorldLoadedOriginal)
 			&& SimpleHook(onWorldUnloadedAddress.as<LPVOID>(), (LPVOID)&HookedOnWorldUnloaded, (LPVOID*)&OnWorldUnloadedOriginal);
 	} catch (const std::exception&) {
-		Core->Logger("Cannot hook the game");
+		spdlog::error("Cannot hook the game");
 	}
 	return false;
 }
@@ -165,7 +167,7 @@ VOID CGameHook::manageDeathLink() {
 		killThePlayer();
 	} else if(lastHealthPoint != 0 && healthPoint == 0) { //The player just died, ignore the deathLink if received
 		if (deathLinkData) {
-			Core->Logger("The player just died, a death link has been ignored", true, false);
+			spdlog::debug("The player just died, a death link has been ignored");
 			deathLinkData = false;
 			return;
 		}
@@ -174,14 +176,8 @@ VOID CGameHook::manageDeathLink() {
 }
 
 VOID CGameHook::killThePlayer() {
-	Core->Logger("Kill the player", true, false);
+	spdlog::debug("Kill the player");
 	WorldChrMan::instance()->mainCharacter->container->dataModule->hp = 0;
-}
-
-VOID debugPrint(const char* prefix, void* data) {
-	std::ostringstream stream;
-	stream << prefix << std::hex << (ULONGLONG)data;
-	Core->Logger(stream.str());
 }
 
 VOID CGameHook::updateRuntimeValues() {
@@ -194,7 +190,7 @@ VOID CGameHook::giveItems() {
 	if (ItemRandomiser->receivedItemsQueue.empty()) return;
 
 	//Send the next item in the list
-	Core->Logger("Send an item from the list of items", true, false);
+	spdlog::debug("Send an item from the list of items");
 	SReceivedItem item = ItemRandomiser->receivedItemsQueue.back();
 	ItemRandomiser->receivedItemsQueue.pop_back();
 	if (item.address == 0x40002346) {

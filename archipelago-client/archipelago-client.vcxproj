@@ -98,7 +98,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>WIN32;_WINDOWS;_USRDLL;DINPUT8_EXPORTS;_WIN32_WINNT=0x0600;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>subprojects;dep;subprojects\wswrap\include;subprojects\apclientpp;subprojects\minhook\include;subprojects\mem\include;subprojects\fd4_singleton;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>subprojects;dep;subprojects\wswrap\include;subprojects\apclientpp;subprojects\minhook\include;subprojects\mem\include;subprojects\fd4_singleton;subprojects\ModEngine2\include;subprojects\MINT;subprojects\spdlog\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <AdditionalOptions>/Zc:__cplusplus %(AdditionalOptions)</AdditionalOptions>
       <LanguageStandard>stdcpp20</LanguageStandard>
     </ClCompile>
@@ -113,13 +113,13 @@
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
-      <PreprocessorDefinitions>_DEBUG;_CONSOLE;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_DEBUG;_CONSOLE;_CRT_SECURE_NO_WARNINGS;MODENGINE_EXTERNAL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalOptions>/bigobj %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
-      <PreprocessorDefinitions>NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>NDEBUG;MODENGINE_EXTERNAL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
@@ -137,6 +137,7 @@
     <ClCompile Include="subprojects\minhook\src\trampoline.c" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="CArchipelagoExtension.h" />
     <ClInclude Include="Core.h" />
     <ClInclude Include="GameHook.h" />
     <ClInclude Include="ArchipelagoInterface.h" />

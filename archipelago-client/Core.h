@@ -4,6 +4,7 @@
 #define _CRT_SECURE_NO_WARNINGS
 //#define WSWRAP_NO_SSL
 
+#include <modengine/extension.h>
 #include "subprojects/apclientpp/apclient.hpp"
 #include <windows.h>
 #include <Windows.h>
@@ -39,32 +40,41 @@
 #define FE_ApplySettings 14
 #define FE_PatternFailed 15
 
-#define VERSION "2.2.0"
+#define VERSION "2.3.0"
 
 
-struct SCore;
-
-class CCore {
+class CCore: public modengine::ModEngineExtension {
 public:
+	CCore(modengine::ModEngineExtensionConnector* connector);
+
 	static VOID Start();
 	static VOID InputCommand();
 	virtual VOID Run();
-	virtual BOOL Initialise();
 	virtual VOID Panic(const char* pMessage, const char* pSort, DWORD dError, DWORD dIsFatalError);
 	virtual VOID ReadConfigFiles();
 	virtual VOID SaveConfigFiles();
 	virtual VOID CleanReceivedItemsList();
 	virtual BOOL CheckOldApFile();
-	virtual VOID Logger(std::string logMessage, BOOL inFile = true, BOOL inConsole = true);
 
 	std::string pSlotName;
 	std::string pPassword;
 	std::string pSeed;
 	BOOL saveConfigFiles = false;
 	BOOL sendGoalStatus = true;
-	std::list<std::string> pReceivedItems = { };
 	int pLastReceivedIndex = 0;
-	BOOL debugLogs = true;
 
 	static const int RUN_SLEEP = 2000;
+
+private:
+	// Whether ModEngine is running in debug mode (in which case we're sharing the console with
+	// its debug output).
+	BOOL modEngineDebug = false;
+
+	const char* id() override {
+		return "archipelago";
+	}
+
+	void on_attach() override;
+	void on_detach() override;
+
 };

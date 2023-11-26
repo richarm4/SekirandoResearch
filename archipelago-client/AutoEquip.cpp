@@ -2,7 +2,6 @@
 
 extern CCore* Core;
 extern CAutoEquip* AutoEquip;
-extern SCore* CoreStruct;
 extern CGameHook* GameHook;
 
 EquipSlot dRingSlotSelect = EquipSlot::ring1;

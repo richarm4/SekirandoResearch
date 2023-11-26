@@ -1,3 +1,6 @@
+#include <spdlog/sinks/basic_file_sink.h>
+#include <spdlog/sinks/wincolor_sink.h>
+
 #include "Core.h"
 #include "GameHook.h"
 
@@ -5,65 +8,72 @@ CCore* Core;
 CGameHook* GameHook;
 CItemRandomiser* ItemRandomiser;
 CAutoEquip* AutoEquip;
-SCore* CoreStruct;
 CArchipelago* ArchipelagoInterface;
 
 using nlohmann::json;
 
-VOID CCore::Start() {
 
-	Core = new CCore();
+CCore::CCore(modengine::ModEngineExtensionConnector* connector)
+		: modengine::ModEngineExtension(connector) {
+
+	Core = this;
 	GameHook = new CGameHook();
 	ItemRandomiser = new CItemRandomiser();
 	AutoEquip = new CAutoEquip();
+}
 
-	if (!Core->Initialise()) {
-		Core->Panic("Failed to initialise", "...\\Randomiser\\Core\\Core.cpp", FE_InitFailed, 1);
-		int3
-	};
+void CCore::on_attach() {
+	// Set up the client console
+	modEngineDebug = !AllocConsole();
+	SetConsoleTitleA("Dark Souls III - Archipelago Console");
+	FILE* fp;
+	freopen_s(&fp, "CONOUT$", "w", stdout);
+	freopen_s(&fp, "CONIN$", "r", stdin);
+
+	// If ModEngine is running in debug mode, all our logs will automatically get printed to the
+	// console. If not, we only want to print info or higher logs to the console, and we want to do
+	// it without any additional prefixes.
+	if (!modEngineDebug) {
+		auto consoleSink = std::make_shared<spdlog::sinks::wincolor_stdout_sink_mt>(spdlog::color_mode::always);
+		consoleSink->set_pattern("%v");
+		consoleSink->set_level(spdlog::level::info);
+		spdlog::default_logger()->sinks().push_back(consoleSink);
+	}
+
+	spdlog::info(
+		"Archipelago client v" VERSION "\n"
+		"A new version may or may not be available, please check this link for updates: "
+		"https://github.com/Marechal-L/Dark-Souls-III-Archipelago-client/releases\n"
+		"Type '/connect {SERVER_IP}:{SERVER_PORT} {SLOT_NAME} [password:{PASSWORD}]' to connect to the room\n"
+		"Type '/help' for more information\n"
+		"-----------------------------------------------------");
+
+	if (!GameHook->initialize()) {
+		Core->Panic("Check if the game version is 1.15 and not 1.15.1, you must use the provided DarkSoulsIII.exe", "Cannot hook the game", FE_InitFailed, 1);
+		return;
+	}
+
+	if (CheckOldApFile()) {
+		spdlog::warn("The AP.json file is not supported in this version, make sure to finish your previous seed on version 1.2 or use this version on the new Archipelago server");
+	}
+
+	// Start command prompt
+	CreateThread(NULL, NULL, (LPTHREAD_START_ROUTINE)Core->InputCommand, NULL, NULL, NULL);
+
+	CreateThread(0, 0, (LPTHREAD_START_ROUTINE)CCore::Start, 0, 0, 0);
+}
+
+void CCore::on_detach() {
+	// Do nothing; this function is never called.
+}
+
+VOID CCore::Start() {
 
 	while (true) {
 		Core->Run();
 		Sleep(RUN_SLEEP);
 	};
-
-	delete CoreStruct;
-	delete Core;
-	delete GameHook;
-	delete ItemRandomiser;
-	delete AutoEquip;
-
-	return;
 };
-
-BOOL CCore::Initialise() {
-
-	//Setup the client console
-	FILE* fp;
-	AllocConsole();
-	SetConsoleTitleA("Dark Souls III - Archipelago Console");
-	freopen_s(&fp, "CONOUT$", "w", stdout);
-	freopen_s(&fp, "CONIN$", "r", stdin);
-	Core->Logger(std::string("Archipelago client v") + VERSION);
-	Core->Logger("A new version may or may not be available, please check this link for updates : https://github.com/Marechal-L/Dark-Souls-III-Archipelago-client/releases", false);
-	Core->Logger("Type '/connect {SERVER_IP}:{SERVER_PORT} {SLOT_NAME} [password:{PASSWORD}]' to connect to the room", false);
-	Core->Logger("Type '/help for more information", false);
-	Core->Logger("-----------------------------------------------------", false);
-
-	if (!GameHook->initialize()) {
-		Core->Panic("Check if the game version is 1.15 and not 1.15.1, you must use the provided DarkSoulsIII.exe", "Cannot hook the game", FE_InitFailed, 1);
-		return false;
-	}
-
-	if (CheckOldApFile()) {
-		Core->Logger("The AP.json file is not supported in this version, make sure to finish your previous seed on version 1.2 or use this version on the new Archipelago server");
-	}
-
-	//Start command prompt
-	CreateThread(NULL, NULL, (LPTHREAD_START_ROUTINE)Core->InputCommand, NULL, NULL, NULL);
-
-	return true;
-}
 
 BOOL CCore::CheckOldApFile() {
 
@@ -92,7 +102,7 @@ VOID CCore::Run() {
 				Core->Panic("Failed to apply settings", "...\\Randomiser\\Core\\Core.cpp", FE_ApplySettings, 1);
 				int3
 			}
-			printf("Mod initialized successfully\n");
+			spdlog::info("Mod initialized successfully");
 			GameHook->showMessage(L"Archipelago connected");
 			isInit = true;
 		}
@@ -111,7 +121,7 @@ VOID CCore::Run() {
 			}
 		} else if (initProtectionDelay > 0) {
 			int secondsRemaining = (RUN_SLEEP / 1000) * initProtectionDelay;
-			printf("The mod will be initialized in %d seconds\n", secondsRemaining);
+			spdlog::info("The mod will be initialized in {} seconds\n", secondsRemaining);
 			initProtectionDelay--;
 		}
 	}
@@ -127,7 +137,7 @@ VOID CCore::Run() {
 */
 VOID CCore::CleanReceivedItemsList() {
 	if (!ItemRandomiser->receivedItemsQueue.empty()) {
-		Core->Logger(std::format("Removing {0} items according to the last_received_index", pLastReceivedIndex), true, false);
+		spdlog::debug("Removing {0} items according to the last_received_index", pLastReceivedIndex);
 		for (int i = 0; i < pLastReceivedIndex; i++) {
 			if (!ItemRandomiser->receivedItemsQueue.empty()) {
 				ItemRandomiser->receivedItemsQueue.pop_back();
@@ -144,7 +154,7 @@ VOID CCore::Panic(const char* pMessage, const char* pSort, DWORD dError, DWORD d
 
 	sprintf_s(pOutput, "\n%s (%i)\n", pMessage, dError);
 
-	Core->Logger(pOutput);
+	spdlog::critical(pOutput);
 	
 	if (dIsFatalError) {
 		sprintf_s(pTitle, "[Archipelago client - Fatal Error]");
@@ -167,11 +177,12 @@ VOID CCore::InputCommand() {
 		std::getline(std::cin, line);
 
 		if (line == "/help") {
-			printf("List of available commands : \n");
-			printf("/help : Prints this help message.\n");
-			printf("!help : Prints the help message related to Archipelago.\n");
-			printf("/connect {SERVER_IP}:{SERVER_PORT} {SLOT_NAME} [password:{PASSWORD}] : Connect to the specified server.\n");
-			printf("/debug on|off : Prints additional debug info \n");
+			spdlog::info(
+				"List of available commands : \n"
+				"/help : Prints this help message.\n"
+				"!help : Prints the help message related to Archipelago.\n"
+				"/connect {SERVER_IP}:{SERVER_PORT} {SLOT_NAME} [password:{PASSWORD}] : Connect to the specified server.\n"
+				"/debug on|off : Prints additional debug info");
 		}
 
 #ifdef DEBUG
@@ -198,12 +209,13 @@ VOID CCore::InputCommand() {
 			std::string param = line.substr(7);
 			BOOL res = (param.find("on") == 0);
 			if (res) {
-				Core->Logger("Debug logs activated", true, true);
-				Core->debugLogs = true;
+				spdlog::info("Debug logs activated");
+				spdlog::default_logger()->set_level(spdlog::level::trace);
 			}
 			else {
-				Core->Logger("Debug logs deactivated", true, true);
-				Core->debugLogs = false;
+				spdlog::info("Debug logs deactivated");
+				spdlog::default_logger()->set_level(
+					Core->modEngineDebug ? spdlog::level::debug : spdlog::level::info);
 			}
 
 			
@@ -212,7 +224,7 @@ VOID CCore::InputCommand() {
 			std::string param = line.substr(9);
 			int spaceIndex = param.find(" ");
 			if (spaceIndex == std::string::npos) {
-				Core->Logger("Missing parameter : Make sure to type '/connect {SERVER_IP}:{SERVER_PORT} {SLOT_NAME} [password:{PASSWORD}]'");
+				spdlog::warn("Missing parameter: make sure to type '/connect {SERVER_IP}:{SERVER_PORT} {SLOT_NAME} [password:{PASSWORD}]'");
 			} else {
 				int passwordIndex = param.find("password:");
 				std::string address = param.substr(0, spaceIndex);
@@ -249,13 +261,13 @@ VOID CCore::ReadConfigFiles() {
 		std::ifstream gameFile(filename);
 		if (!gameFile.good()) {
 			//Missing session file, that's probably a new game
-			Logger("No save found, starting a new game", true, false);
+			spdlog::debug("No save found, starting a new game");
 			return;
 		}
 	}
 
 	//Read the game file
-	Logger("Reading " + outputFolder + "/" + filename, true, false);
+	spdlog::debug("Reading {}/{}", outputFolder, filename);
 	json k;
 
 	try {
@@ -280,7 +292,7 @@ VOID CCore::SaveConfigFiles() {
 	std::string outputFolder = "archipelago";
 	std::string filename = Core->pSeed + "_" + Core->pSlotName + ".json";
 
-	Logger("Writing to " + outputFolder + "/" + filename, true, false);
+	spdlog::debug("Writing to {}/{}", outputFolder, filename);
 
 	json j;
 	j["last_received_index"] = pLastReceivedIndex;
@@ -298,56 +310,15 @@ VOID CCore::SaveConfigFiles() {
 		}
 	}
 	catch (const std::exception&) {
-		Logger("Failed writing " + outputFolder + "/" + filename, true, true);
+		spdlog::warn("Failed writing {}/{}", outputFolder, filename);
 	}
 }
 
 
-inline std::string getCurrentDateTime(std::string s) {
-	time_t now = time(0);
-	struct tm  tstruct;
-	char buf[80];
-	tstruct = *localtime(&now);
-	if (s == "now")
-		strftime(buf, sizeof(buf), "%Y-%m-%d %X", &tstruct);
-	else if (s == "date")
-		strftime(buf, sizeof(buf), "%Y-%m-%d", &tstruct);
-	return std::string(buf);
-};
-
-VOID CCore::Logger(std::string logMessage, BOOL inFile, BOOL inConsole) {
-
-	if(inConsole)
-		std::cout << logMessage << std::endl;
-
-	if (inFile) {
-		try {
-			std::string outputFolder = "archipelago";
-			std::string filename = "log_" + getCurrentDateTime("date") + ".txt";
-			std::ofstream logFile(outputFolder + "\\" + filename, std::ios_base::out | std::ios_base::app);
-
-			std::string now = getCurrentDateTime("now");
-			logFile << now << '\t' << logMessage << '\n';
-			logFile.close();
-		} catch (const std::exception&) {
-			//Logging is optional and should not crash the mod
-		}
-	}
-}
-
-BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved) {
-
-	switch (fdwReason)
-	{
-	case DLL_PROCESS_ATTACH:
-
-		DisableThreadLibraryCalls(hinstDLL);
-		CreateThread(0, 0, (LPTHREAD_START_ROUTINE)CCore::Start, 0, 0, 0);
-
-		break;
-	}
-
-	return TRUE;
-
+// Entrypoint called by ModEngine2 to initialize this extension.
+bool modengine_ext_init(modengine::ModEngineExtensionConnector* connector,
+		modengine::ModEngineExtension** extension) {
+	*extension = new CCore(connector);
+	return true;
 }
 

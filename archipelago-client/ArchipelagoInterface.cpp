@@ -1,4 +1,5 @@
 #include <sstream>
+#include <spdlog/spdlog.h>
 
 #include "ArchipelagoInterface.h"
 
@@ -19,7 +20,7 @@ APClient* ap;
 
 BOOL CArchipelago::Initialise(std::string URI) {
 	
-	Core->Logger("CArchipelago::Initialise", true, false);
+	spdlog::debug("CArchipelago::Initialise");
 
 	// read or generate uuid, required by AP
 	std::string uuid = ap_get_uuid(UUID_FILE);
@@ -35,7 +36,7 @@ BOOL CArchipelago::Initialise(std::string URI) {
 	ap->set_socket_disconnected_handler([]() {
 		});
 	ap->set_slot_connected_handler([](const json& data) {
-		Core->Logger("Slot connected successfully, reading slot data ... ");
+		spdlog::info("Slot connected successfully, reading slot data ... ");
 		// read the archipelago slot data
 
 		//Mandatory values
@@ -73,14 +74,13 @@ BOOL CArchipelago::Initialise(std::string URI) {
 
 		});
 	ap->set_slot_disconnected_handler([]() {
-		Core->Logger("Slot disconnected");
-
+		spdlog::info("Slot disconnected");
 		GameHook->showMessage(L"Archipelago disconnected! Don't pick up any items until it reconnects");
 
 		});
 	ap->set_slot_refused_handler([](const std::list<std::string>& errors){
 		for (const auto& error : errors) {
-			Core->Logger("Connection refused : " + error);
+			spdlog::warn("Connection refused: {}", error);
 		}
 		GameHook->showMessage(L"Archipelago connection refused!");
 		});
@@ -110,18 +110,12 @@ BOOL CArchipelago::Initialise(std::string URI) {
 				continue;
 			}
 
-			std::ostringstream stringStream;
-			stringStream << "#" << item.index << ": " << itemname.c_str() << " from " << sender.c_str() << " - " << location.c_str();
-			std::string itemDesc = stringStream.str();
-
-			//Add the item to the list of already received items, only for logging purpose
-			Core->pReceivedItems.push_back(itemDesc);
-			Core->Logger(itemDesc);
+			spdlog::info("#{}: {} from {} - {}", item.index, itemname, sender, location);
 
 			//Determine the item address
 			auto ds3IdSearch = ItemRandomiser->pApItemsToItemIds.find(item.item);
 			if (ds3IdSearch == ItemRandomiser->pApItemsToItemIds.end()) {
-				Core->Logger("The following item has not been found in the item pool. Please check your seed options : " + itemname);
+				spdlog::warn("Item '{}' was not found in the item pool. Please check your seed options.", itemname);
 				continue;
 			}
 
@@ -136,17 +130,17 @@ BOOL CArchipelago::Initialise(std::string URI) {
 	//TODO :   * you can still use `set_data_package` or `set_data_package_from_file` during migration to make use of the old cache
 
 	ap->set_print_handler([](const std::string& msg) {
-		Core->Logger(msg);
+		spdlog::info(msg);
 		GameHook->showMessage(msg);
 		});
 
 	ap->set_print_json_handler([](const std::list<APClient::TextNode>& msg) {
-		Core->Logger(ap->render_json(msg, APClient::RenderFormat::TEXT));
+		spdlog::info(ap->render_json(msg, APClient::RenderFormat::TEXT));
 		});
 
 	ap->set_bounced_handler([](const json& cmd) {
 		if (GameHook->dIsDeathLink) {
-			Core->Logger("Received DeathLink", true, false);
+			spdlog::debug("Received DeathLink");
 			auto tagsIt = cmd.find("tags");
 			auto dataIt = cmd.find("data");
 			if (tagsIt != cmd.end() && tagsIt->is_array()
@@ -159,14 +153,14 @@ BOOL CArchipelago::Initialise(std::string URI) {
 						std::string source = data["source"].is_string() ? data["source"].get<std::string>().c_str() : "???";
 						std::string cause = data["cause"].is_string() ? data["cause"].get<std::string>().c_str() : "???";
 						std::string message = "Died by the hands of " + source + " : " + cause;
-						Core->Logger(message);
+						spdlog::info(message);
 						GameHook->showMessage(message);
 
 						GameHook->deathLinkData = true;
 					}
 				}
 				else {
-					Core->Logger("Bad deathlink packet!", true, false);
+					spdlog::debug("Bad deathlink packet!");
 				}
 			}
 		}
@@ -194,11 +188,11 @@ VOID CArchipelago::update() {
 	int size = ItemRandomiser->checkedLocationsList.size();
 	if (ap && size > 0) {
 		if (ap->LocationChecks(ItemRandomiser->checkedLocationsList)) {
-			Core->Logger(size + " checks sent successfully", true, false);
+			spdlog::debug("{} checks sent successfully", size);
 			ItemRandomiser->checkedLocationsList.clear();
 		}
 		else {
-			Core->Logger(size + " checks has not been sent and will be kept in queue");
+			spdlog::debug("{} checks have not been sent and will be kept in queue", size);
 		}
 	}
 }
@@ -210,7 +204,7 @@ VOID CArchipelago::gameFinished() {
 VOID CArchipelago::sendDeathLink() {
 	if (!ap || !GameHook->dIsDeathLink) return;
 
-	Core->Logger("Sending deathlink");
+	spdlog::info("Sending deathlink");
 
 	json data{
 		{"time", ap->get_server_time()},
