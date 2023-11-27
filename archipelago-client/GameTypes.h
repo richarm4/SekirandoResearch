@@ -83,7 +83,7 @@ struct WorldChrMan : public FD4Singleton<WorldChrMan, "WorldChrMan"> {
 // A singleton class containing information about the current game world.
 struct GameDataMan {
 	void** vftable_ptr;
-	uint32_t unk00;
+	void* trophyEquipData;
 	void* localPlayerData;
 
 	static GameDataMan* instance();

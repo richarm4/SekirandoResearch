@@ -70,13 +70,13 @@ struct SprjEventFlagMan : public FD4Singleton<SprjEventFlagMan, "SprjEventFlagMa
 };
 
 GameDataMan* GameDataMan::instance() {
-	static GameDataMan* static_address = [] {
+	static GameDataMan** static_address = [] {
 		return ResolveMov(FindPattern(
 			"GameDataMan",
 			"48 8B 05 ?? ?? ?? ?? 48 85 C0 ?? ?? 48 8B 40 ?? C3"
-		)).as<GameDataMan*>();
+		)).as<GameDataMan**>();
 	}();
-	return static_address;
+	return *static_address;
 }
 
 // Hook the functions necessary to customize game behavior.

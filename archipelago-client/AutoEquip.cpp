@@ -1,3 +1,6 @@
+#include <spdlog/fmt/fmt.h>
+#include <spdlog/spdlog.h>
+
 #include "AutoEquip.h"
 #include "GameHook.h"
 
@@ -23,13 +26,19 @@ VOID CAutoEquip::AutoEquipItem(SItemBuffer* pItemBuffer) {
 		int3
 	};
 
+	spdlog::trace("Auto-equipping {} items", pItemBuffer->length);
 	for (int i = 0; i < pItemBuffer->length; i++) {
 
 		SItemBufferEntry* dItem = &pItemBuffer->items[i];
 		auto equipSlot = SortItem(dItem->id);
-		if (!equipSlot.has_value()) return;
+		if (!equipSlot.has_value()) {
+			spdlog::trace("Item {} is not equipment", dItem->id);
+			return;
+		}
 
+		spdlog::trace("Item {}'s equip slot: {}", dItem->id, fmt::underlying(equipSlot.value()));
 		auto inventorySlot = GetInventorySlotID(dItem->id);
+		spdlog::trace("Item {}'s inventory slot: {}", dItem->id, inventorySlot);
 		if (inventorySlot < 0) {
 			std::ostringstream stream;
 			stream << "Unable to find item: " << std::hex << dItem->id;
@@ -38,7 +47,9 @@ VOID CAutoEquip::AutoEquipItem(SItemBuffer* pItemBuffer) {
 		};
 
 		LockUnlockEquipSlots(1);
+		spdlog::trace("Unlocked equip slots");
 		GameHook->equipItem(equipSlot.value(), inventorySlot);
+		spdlog::trace("Equipped item");
 	}
 
 	return;

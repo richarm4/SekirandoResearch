@@ -30,17 +30,22 @@ void CCore::on_attach() {
 	modEngineDebug = !AllocConsole();
 	SetConsoleTitleA("Dark Souls III - Archipelago Console");
 	FILE* fp;
-	freopen_s(&fp, "CONOUT$", "w", stdout);
 	freopen_s(&fp, "CONIN$", "r", stdin);
 
 	// If ModEngine is running in debug mode, all our logs will automatically get printed to the
 	// console. If not, we only want to print info or higher logs to the console, and we want to do
 	// it without any additional prefixes.
 	if (!modEngineDebug) {
+		freopen_s(&fp, "CONOUT$", "w", stdout);
 		auto consoleSink = std::make_shared<spdlog::sinks::wincolor_stdout_sink_mt>(spdlog::color_mode::always);
 		consoleSink->set_pattern("%v");
 		consoleSink->set_level(spdlog::level::info);
 		spdlog::default_logger()->sinks().push_back(consoleSink);
+	}
+	else {
+		// ME2 should really handle these by default, but currently it does not.
+		spdlog::default_logger()->set_level(spdlog::level::trace);
+		spdlog::default_logger()->flush_on(spdlog::level::trace);
 	}
 
 	spdlog::info(
@@ -51,6 +56,8 @@ void CCore::on_attach() {
 		"Type '/help' for more information\n"
 		"-----------------------------------------------------");
 
+	// TODO: Use ModEngine2's infrastructure for registering hooks once it's more usable. See
+	// https://github.com/soulsmods/ModEngine2/issues/156.
 	if (!GameHook->initialize()) {
 		Core->Panic("Check if the game version is 1.15 and not 1.15.1, you must use the provided DarkSoulsIII.exe", "Cannot hook the game", FE_InitFailed, 1);
 		return;

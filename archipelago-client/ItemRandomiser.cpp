@@ -14,12 +14,11 @@ void CItemRandomiser::HookedItemGib(void* mapItemMan, SItemBuffer* pItemBuffer, 
 
 	// TODO: This check excludes pickle pee items but also dropped items, which may be desirable
 	// for auto-equip mode. Figure out whether to remove it.
-	if (*pItemData >= 0) {
-		ItemRandomiser->RandomiseItem(pItemBuffer);
-		if (ItemRandomiser->dIsAutoEquip) AutoEquip->AutoEquipItem(pItemBuffer);
-	}
+	if (*pItemData >= 0) ItemRandomiser->RandomiseItem(pItemBuffer);
 
 	ItemRandomiser->ItemGibOriginal(mapItemMan, pItemBuffer, pItemData);
+
+	if (*pItemData >= 0 && ItemRandomiser->dIsAutoEquip) AutoEquip->AutoEquipItem(pItemBuffer);
 }
 
 
@@ -61,7 +60,7 @@ VOID CItemRandomiser::RandomiseItem(SItemBuffer* pItemBuffer) {
 			//Nothing to do, this is a vanilla item so we will let it go to the player's inventory	
 		}
 
-		spdlog::trace("OUT itemID: {}\n", dItem->id);
+		spdlog::trace("OUT itemID: {}", dItem->id);
 	};
 
 	if (indexToRemove != -1)
