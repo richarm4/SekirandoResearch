@@ -76,14 +76,14 @@ BOOL CArchipelago::Initialise(std::string URI) {
 		});
 	ap->set_slot_disconnected_handler([]() {
 		spdlog::info("Slot disconnected");
-		GameHook->showMessage(L"Archipelago disconnected! Don't pick up any items until it reconnects");
+		GameHook->showBanner(L"Archipelago disconnected! Don't pick up any items until it reconnects");
 
 		});
 	ap->set_slot_refused_handler([](const std::list<std::string>& errors){
 		for (const auto& error : errors) {
 			spdlog::warn("Connection refused: {}", error);
 		}
-		GameHook->showMessage(L"Archipelago connection refused!");
+		GameHook->showBanner(L"Archipelago connection refused!");
 		});
 
 	ap->set_room_info_handler([]() {
@@ -132,11 +132,12 @@ BOOL CArchipelago::Initialise(std::string URI) {
 
 	ap->set_print_handler([](const std::string& msg) {
 		spdlog::info(msg);
-		GameHook->showMessage(msg);
+		GameHook->showBanner(msg);
 		});
 
 	ap->set_print_json_handler([](const std::list<APClient::TextNode>& msg) {
-		spdlog::info(ap->render_json(msg, APClient::RenderFormat::TEXT));
+		auto message = ap->render_json(msg, APClient::RenderFormat::TEXT);
+		spdlog::info(message);
 		});
 
 	ap->set_bounced_handler([](const json& cmd) {
@@ -155,7 +156,7 @@ BOOL CArchipelago::Initialise(std::string URI) {
 						std::string cause = data["cause"].is_string() ? data["cause"].get<std::string>().c_str() : "???";
 						std::string message = "Died by the hands of " + source + " : " + cause;
 						spdlog::info(message);
-						GameHook->showMessage(message);
+						GameHook->showBanner(message);
 
 						GameHook->deathLinkData = true;
 					}

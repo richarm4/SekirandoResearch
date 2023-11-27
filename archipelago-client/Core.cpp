@@ -59,7 +59,7 @@ void CCore::on_attach() {
 	// TODO: Use ModEngine2's infrastructure for registering hooks once it's more usable. See
 	// https://github.com/soulsmods/ModEngine2/issues/156.
 	if (!GameHook->initialize()) {
-		Core->Panic("Check if the game version is 1.15 and not 1.15.1, you must use the provided DarkSoulsIII.exe", "Cannot hook the game", FE_InitFailed, 1);
+		Core->Panic("Check if the game version is 1.15.2, you must use the provided DarkSoulsIII.exe", "Cannot hook the game", FE_InitFailed, 1);
 		return;
 	}
 
@@ -113,7 +113,7 @@ VOID CCore::Run() {
 				int3
 			}
 			spdlog::info("Mod initialized successfully");
-			GameHook->showMessage(L"Archipelago connected");
+			GameHook->showBanner(L"Archipelago connected");
 			isInit = true;
 		}
 

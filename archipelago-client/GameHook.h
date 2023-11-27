@@ -22,8 +22,8 @@ public:
 
 	// Displays a banner message to the player. Only works if they're in an active game, not on the
 	// menu.
-	virtual VOID showMessage(std::wstring message);
-	virtual VOID showMessage(std::string message);
+	virtual VOID showBanner(std::wstring message);
+	virtual VOID showBanner(std::string message);
 
 	// Sets the event flag with the given ID on or off. Works the same as the DarkScript3 function of
 	// the same name.

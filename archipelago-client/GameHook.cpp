@@ -275,21 +275,17 @@ VOID CGameHook::LockEquipSlots() {
 	return;
 }
 
-VOID CGameHook::showMessage(std::wstring message) {
-	auto fShowBanner = FindPattern("fShowBanner", "90 48 8b 44 24 30 48 85 c0 75 11", -0x2D)
-		.as<void (*)(UINT_PTR unused, DWORD unknown, ULONGLONG messageId)>();
-
+VOID CGameHook::showBanner(std::wstring message) {
 	// The way this works is a bit hacky. DS3 looks up all its user-facing text by ID for localization
 	// purposes, so we show a banner with an unused ID (0x10001312) and hook into the ID function to
-	// return the value of nextMessageToSend. Ideally we'd be able to just set up a 
+	// return the value of nextMessageToSend.
 	nextMessageToSend = message;
-	fShowBanner(NULL, 1, 0x10001312);
-	nextMessageToSend = std::wstring();
+	setEventFlag(100001313, true);
 }
 
-VOID CGameHook::showMessage(std::string message) {
+VOID CGameHook::showBanner(std::string message) {
 	std::wstring wideMessage(message.begin(), message.end());
-	showMessage(wideMessage);
+	showBanner(wideMessage);
 }
 
 VOID CGameHook::setEventFlag(DWORD eventId, BOOL enabled) {
@@ -366,8 +362,9 @@ static mem::pointer ResolveMov(mem::pointer pointer) {
 }
 
 const wchar_t* CGameHook::HookedGetActionEventInfoFmg(LPVOID messages, DWORD messageId) {
+	spdlog::info("Got message request for {}", messageId);
 	switch (messageId) {
-	case 0x10001312:
+	case 100001312:
 		if (GameHook->nextMessageToSend.length() > 0) {
 			return GameHook->nextMessageToSend.c_str();
 		}
