@@ -362,7 +362,6 @@ static mem::pointer ResolveMov(mem::pointer pointer) {
 }
 
 const wchar_t* CGameHook::HookedGetActionEventInfoFmg(LPVOID messages, DWORD messageId) {
-	spdlog::info("Got message request for {}", messageId);
 	switch (messageId) {
 	case 100001312:
 		if (GameHook->nextMessageToSend.length() > 0) {
