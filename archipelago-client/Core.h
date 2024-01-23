@@ -63,6 +63,9 @@ public:
 	BOOL sendGoalStatus = true;
 	int pLastReceivedIndex = 0;
 
+	// Whether Archipelago is currently connected or not.
+	BOOL connected = false;
+
 	static const int RUN_SLEEP = 2000;
 
 private:

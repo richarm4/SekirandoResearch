@@ -311,6 +311,16 @@ VOID CGameHook::equipItem(EquipSlot equipSlot, DWORD inventorySlot) {
 	fEquipItem(equipSlot, &buffer);
 }
 
+VOID CGameHook::removeFromInventory(int32_t itemCategory, int32_t itemId, uint64_t quantity) {
+	auto fRemoveFromInventory = FindPattern(
+		"fRemoveFromInventory",
+		"48 8b 05 c9 ?? ?? 04 41 8b d9 45 8b f0 48 8b 78 10",
+		-0x18
+	).as<void (*)(void* unused, int32_t itemCategory, uint32_t itemId, uint64_t quantity)>();
+
+	fRemoveFromInventory(NULL, itemCategory, itemId, quantity);
+}
+
 BOOL CGameHook::checkIsDlcOwned() {
 	auto dlc = CSDlc::instance();
 	return dlc->dlc1Installed && dlc->dlc2Installed;

@@ -35,6 +35,9 @@ public:
 	// Equips an item for the active player based on its index in their inventory.
 	virtual VOID equipItem(EquipSlot equipSlot, DWORD inventorySlot);
 
+	// Removes the given item from the player's inventory, if it contains any.
+	virtual VOID removeFromInventory(int32_t itemCategory, int32_t itemId, uint64_t quantity = 1);
+
 	DWORD dLockEquipSlots;
 	DWORD dIsNoWeaponRequirements;
 	DWORD dIsNoSpellsRequirements;

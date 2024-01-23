@@ -73,9 +73,13 @@ BOOL CArchipelago::Initialise(std::string URI) {
 			ap->ConnectUpdate(false, 1, true, tags);
 		}
 
+		Core->connected = true;
+		ItemRandomiser->sendMissedItems();
+
 		});
 	ap->set_slot_disconnected_handler([]() {
 		spdlog::info("Slot disconnected");
+		Core->connected = false;
 		GameHook->showBanner(L"Archipelago disconnected! Don't pick up any items until it reconnects");
 
 		});

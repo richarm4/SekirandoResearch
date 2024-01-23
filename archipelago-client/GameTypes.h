@@ -80,11 +80,54 @@ struct WorldChrMan : public FD4Singleton<WorldChrMan, "WorldChrMan"> {
 	SPlayerIns* mainCharacter;
 };
 
+/// A single item int he player's inventory.
+struct InventorySlotItem {
+	uint32_t handle;
+	uint32_t itemId;
+	uint32_t itemCount;
+	uint32_t unk00;
+};
+
+struct EquipInventoryDataList {
+	uint8_t unk00[0x14];
+	uint32_t slotIdCap;
+	uint8_t unk01[0x20];
+	InventorySlotItem* itemsAboveCap;
+	uint64_t unk02;
+	InventorySlotItem* itemsBelowCap;
+};
+
+/// Information about the current player's inventory.
+struct EquipInventoryData {
+	uint8_t unk00[0x10];
+	EquipInventoryDataList list;
+};
+
+/// Information about the current player's equipment.
+struct EquipGameData {
+	uint8_t unk00[0x1a8];
+	EquipInventoryData equipInventoryData;
+};
+
+/// Information about the current player's state.
+struct PlayerGameData {
+	uint8_t unk00[0x228];
+	EquipGameData equipGameData1;
+};
+
 // A singleton class containing information about the current game world.
 struct GameDataMan {
 	void** vftable_ptr;
 	void* trophyEquipData;
-	void* localPlayerData;
+	PlayerGameData* localPlayerData;
 
 	static GameDataMan* instance();
+};
+
+/// A representation of an item in the player's inventory, used by some built-in functions that
+/// modify the inventory.
+struct InventoryItemId {
+	uint8_t unk00[0x38];
+	int inventoryId;
+	int itemId;
 };

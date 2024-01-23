@@ -20,6 +20,9 @@ public:
 	decltype(&HookedItemGib) ItemGibOriginal;
 	decltype(&HookedOnGetItem) OnGetItemOriginal;
 
+	// Send all foreign items in the player's inventory to the Archipelago server, then remove them.
+	virtual VOID sendMissedItems();
+
 	DWORD dIsAutoEquip;
 	std::map<DWORD, DWORD> pApItemsToItemIds = { };
 	std::map<DWORD, DWORD> pItemCounts = { };

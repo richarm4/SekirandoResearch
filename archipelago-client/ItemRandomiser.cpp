@@ -80,13 +80,18 @@ uint64_t CItemRandomiser::HookedOnGetItem(void* pEquipInventoryData, uint32_t qI
 		uint32_t qItemID, uint32_t qCount, void* qUnknown2) {
 	// This function is frequently called with very high item IDs while the game is loading
 	// for unclear reasons. We want to ignore those calls.
-	if (qItemCategory == 0x40000000 && qItemID > 3780000 && qItemID < 0xffffffU) {
+	auto isSyntheticItem = qItemCategory == 0x40000000 && qItemID > 3780000 && qItemID < 0xffffffU;
+	if (isSyntheticItem && Core->connected) {
 		EquipParamGoodsRow* row = GetGoodsParam(qItemID & 0xfffffffU);
 		if (row != NULL) {
 			ItemRandomiser->OnGetSyntheticItem(row);
 		}
 	}
-	return ItemRandomiser->OnGetItemOriginal(pEquipInventoryData, qItemCategory, qItemID, qCount, qUnknown2);
+	auto result = ItemRandomiser->OnGetItemOriginal(pEquipInventoryData, qItemCategory, qItemID, qCount, qUnknown2);
+	// If the player isn't connected to Archipelago, hold onto foreign items so that we can send
+	// them out once they reconnect.
+	if (isSyntheticItem && Core->connected) GameHook->removeFromInventory(qItemCategory, qItemID);
+	return result;
 }
 
 // Tells the Archipelago server that a synthetic item was aquired (meaning that a location was
@@ -99,3 +104,22 @@ VOID CItemRandomiser::OnGetSyntheticItem(EquipParamGoodsRow* row) {
 		((int64_t)(row->vagrantBonusEneDropItemLotId) << 32);
 	checkedLocationsList.push_front(archipelagoLocationId);
 }
+
+VOID CItemRandomiser::sendMissedItems() {
+	auto itemList = GameDataMan::instance()->localPlayerData->equipGameData1.equipInventoryData.list;
+	for (uint32_t i = 0; i < itemList.slotIdCap; i++) {
+		// Key items are always in itemList.itemsBelowCap
+		auto item = itemList.itemsBelowCap[i];
+		if (item.handle == 0) continue;
+		if (item.itemCount == 0) continue;
+		auto itemCategory = item.itemId & 0xf0000000;
+		auto itemId = item.itemId & 0xfffffff;
+
+		if (itemCategory == 0x40000000 && itemId > 3780000 && itemId < 0xffffffU) {
+			EquipParamGoodsRow* row = GetGoodsParam(item.itemId & 0xfffffffU);
+			if (row != NULL) ItemRandomiser->OnGetSyntheticItem(row);
+			GameHook->removeFromInventory(itemCategory, itemId, 1);
+		}
+	}
+}
+
