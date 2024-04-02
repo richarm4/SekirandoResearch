@@ -1,0 +1,34 @@
+name: Release
+
+on:
+  push:
+    tags: ['v*.*.*']
+
+jobs:
+  build-mod:
+    env: 
+      VCPKG_BINARY_SOURCES: "clear;x-gha,readwrite"
+    runs-on: windows-latest
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        submodules: recursive
+    - uses: microsoft/setup-msbuild@v2
+  
+    # From https://learn.microsoft.com/en-us/vcpkg/consume/binary-caching-github-actions-cache
+    - name: Export GitHub Actions cache environment variables
+      uses: actions/github-script@v6
+      with:
+        script: |
+          core.exportVariable('ACTIONS_CACHE_URL', process.env.ACTIONS_CACHE_URL || '');
+          core.exportVariable('ACTIONS_RUNTIME_TOKEN', process.env.ACTIONS_RUNTIME_TOKEN || '');
+
+    - run: vcpkg integrate install
+      working-directory: archipelago-client
+    - name: Build mod
+      run: msbuild archipelago-client\archipelago-client.vcxproj -verbosity:diag '-property:Configuration=Release;Platform=x64'
+      
+    - uses: actions/upload-artifact@v4
+      with:
+        name: archipelago.dll
+        path: archipelago-client\x64\Release\archipelago.dll
