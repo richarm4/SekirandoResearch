@@ -87,7 +87,7 @@ jobs:
     - uses: actions/checkout@v4
       with:
         repository: nex3/Archipelago
-        ref: ds3-${{ jobs.version.outputs.version }}
+        ref: ds3-${{ needs.version.outputs.version }}
 
     - uses: actions/setup-python@v5
       with:
@@ -113,7 +113,7 @@ jobs:
     runs-on: windows-latest
     needs: [version, build-mod, build-static, build-yaml]
     env:
-      dir: DS3 Archipelago ${{ jobs.version.outputs.version }}
+      dir: DS3 Archipelago ${{ needs.version.outputs.version }}
 
     steps:
     - uses: actions/checkout@v4
@@ -138,7 +138,7 @@ jobs:
 
     - name: Download Archipelago repo
       run: |
-        Invoke-WebRequest -OutFile Archipelago.zip -Uri "https://github.com/nex3/Archipelago/archive/refs/tags/ds3-$tag.zip"
+        Invoke-WebRequest -OutFile Archipelago.zip -Uri "https://github.com/nex3/Archipelago/archive/refs/tags/ds3-${{ needs.version.outputs.version }}.zip"
         Expand-Archive Archipelago.zip .
 
     - name: Assemble release
