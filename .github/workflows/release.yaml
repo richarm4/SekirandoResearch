@@ -5,8 +5,21 @@ on:
     tags: ['v*.*.*']
 
 jobs:
+  version:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+    - id: version
+      run: |
+        ver="${{ github.ref_name }}"
+        if [[ "$ver" == v* ]]; then
+          ver="${ver:1}"
+        fi
+        echo "version=$ver" >> "$GITHUB_OUTPUT"
+
   build-mod:
-    env: 
+    env:
       VCPKG_BINARY_SOURCES: "clear;x-gha,readwrite"
     runs-on: windows-latest
     steps:
@@ -14,7 +27,7 @@ jobs:
       with:
         submodules: recursive
     - uses: microsoft/setup-msbuild@v2
-  
+
     # From https://learn.microsoft.com/en-us/vcpkg/consume/binary-caching-github-actions-cache
     - name: Export GitHub Actions cache environment variables
       uses: actions/github-script@v7
@@ -27,19 +40,20 @@ jobs:
       working-directory: archipelago-client
     - name: Build mod
       run: msbuild archipelago-client\archipelago-client.vcxproj -verbosity:diag '-property:Configuration=Release;Platform=x64'
-      
+
     - uses: actions/upload-artifact@v4
       with:
         name: archipelago.dll
         path: archipelago-client\x64\Release\archipelago.dll
+        if-no-files-found: error
 
   build-static:
-    runs-on: windows-latest  
+    runs-on: windows-latest
     steps:
     - uses: actions/checkout@v4
       with:
         repository: nex3/SoulsRandomizers
-        ref: archipelago-server
+        ref: ${{ github.ref_name }}
         path: SoulsRandomizers
     - uses: actions/checkout@v4
       with:
@@ -53,14 +67,111 @@ jobs:
         ref: dsms
         path: SoulsFormats
     - uses: microsoft/setup-msbuild@v2
-  
+
     - name: Install dependencies
       run: dotnet restore SoulsRandomizers\SoulsRandomizers.sln
 
     - name: Build randomizer
       run: msbuild SoulsRandomizers\DS3Randomizer\DS3Randomizer.csproj '-property:Configuration=Release (Archipelago);PublishDir=bin\publish;PublishProtocol=FileSystem;_TargetId=Folder' '-t:Build;Publish'
-      
+
     - uses: actions/upload-artifact@v4
       with:
         name: DS3Randomizer.exe
         path: SoulsRandomizers\DS3Randomizer\bin\publish\DS3Randomizer.exe
+        if-no-files-found: error
+
+  build-yaml:
+    runs-on: windows-latest
+    needs: [version]
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        repository: nex3/Archipelago
+        ref: ds3-${{ jobs.version.outputs.version }}
+
+    - uses: actions/setup-python@v5
+      with:
+        python-version: 3.11
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install pytest pytest-subtests pytest-xdist
+        python ModuleUpdate.py --yes --force --append "WebHostLib\requirements.txt"
+
+    - name: Generate YAML
+      run: |
+        python Launcher.py 'Generate Template Options'
+        Move-Item -Path 'Players\Templates\Dark Souls III.yaml' -Destination 'Dark Souls III Options Template.yaml'
+
+    - uses: actions/upload-artifact@v4
+      with:
+        name: Dark Souls III Options Template.yaml
+        path: Dark Souls III Options Template.yaml
+        if-no-files-found: error
+
+  build-zip:
+    runs-on: windows-latest
+    needs: [version, build-mod, build-static, build-yaml]
+    env:
+      dir: DS3 Archipelago ${{ jobs.version.outputs.version }}
+
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        path: Dark-Souls-III-Archipelago-client
+
+    - uses: actions/checkout@v4
+      with:
+        repository: nex3/SoulsRandomizers
+        ref: archipelago-server
+        path: SoulsRandomizers
+
+    - name: Download static files
+      run: |
+        Invoke-WebRequest -OutFile old.zip -Uri 'https://github.com/nex3/Dark-Souls-III-Archipelago-client/releases/download/v3.0.0-beta.1/DS3.Archipelago.2.3.0-beta.1.zip'
+        Expand-Archive old.zip -DestinationPath .
+
+    - name: Download ModEngine2
+      run: |
+        Invoke-WebRequest -OutFile ME2.zip -Uri 'https://github.com/soulsmods/ModEngine2/releases/download/release-2.1.0/ModEngine-2.1.0.0-win64.zip'
+        Expand-Archive ME2.zip -DestinationPath .
+
+    - name: Download Archipelago repo
+      run: |
+        Invoke-WebRequest -OutFile Archipelago.zip -Uri "https://github.com/nex3/Archipelago/archive/refs/tags/ds3-$tag.zip"
+        Expand-Archive Archipelago.zip .
+
+    - name: Assemble release
+      run: |
+        Move-Item -Path Dark-Souls-III-Archipelago-client\release -Destination $env:dir
+        mkdir -p $env:dir\randomizer\spoiler_logs
+        Move-Item -Path SoulsRandomizers\dist $env:dir\randomizer
+        Move-Item -Path 'DS3 Archipelago 2.3.0-beta.1\randomizer\presets', 'DS3 Archipelago 2.3.0-beta.1\randomizer\script', 'DS3 Archipelago 2.3.0-beta.1\randomizer\sfx' -Destination $env:dir\randomizer
+        Move-Item -Path ModEngine-*\modengine2, ModEngine-*\launchmod_darksouls3.bat, ModEngine-*\modengine2_launcher.exe -Destination $env:dir
+        Move-Item -Path Archipelago-* -Destination $env:dir\archipelago
+
+    - name: Download archipelago.dll
+      uses: actions/download-artifact@v4
+      with:
+        name: archipelago.dll
+        path: ${{ env.dir }}
+
+    - name: Download DS3Randomizer.exe
+      uses: actions/download-artifact@v4
+      with:
+        name: DS3Randomizer.exe
+        path: ${{ env.dir }}/randomizer
+
+    - name: Download YAML
+      uses: actions/download-artifact@v4
+      with:
+        name: Dark Souls III Options Template.yaml
+        path: ${{ env.dir }}
+
+    - name: Zip release
+      run: Compress-Archive -Path $env:dir -DestinationPath "${{ env.dir }}.zip"
+
+    - uses: softprops/action-gh-release@v2
+      with:
+        body_path: ${{ env.dir }}/README.txt
+        files: ${{ env.dir }}.zip
