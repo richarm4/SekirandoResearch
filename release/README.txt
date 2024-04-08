@@ -1,4 +1,4 @@
-# Dark Souls III Archipelago Randomizer 3.0.0-beta.7
+# Dark Souls III Archipelago Randomizer 3.0.0-beta.8
 
 This is a preview release of a new architecture for randomizing Dark Souls III for the Archipelago multiworld randomizer. It has a number of major feature improvements over the old 2.x.x line, including:
 
@@ -24,7 +24,7 @@ This is a preview release of a new architecture for randomizing Dark Souls III f
 
 To use this preview, you must generate your multiworld with my fork of Archipelago, located in the `archipelago` directory of the release below. See [the "Running From Source" documentation] for more details. Once you've generated a ZIP file, upload it to https://archipelago.gg/uploads and you're good to go. (Unfortunately running from an `.apworld` file won't work until [this pull request] is merged and released.)
 
-[the "Running From Source" documentation]: https://github.com/nex3/Archipelago/blob/ds3-3.0.0-beta.7/docs/running%20from%20source.md
+[the "Running From Source" documentation]: https://github.com/nex3/Archipelago/blob/ds3-3.0.0-beta.8/docs/running%20from%20source.md
 [this pull request]: https://github.com/ArchipelagoMW/Archipelago/pull/2403
 
 Note that not all YAML fields for Dark Souls III's 2.x.x Archipelago randomizer are supported as-is, and some new fields are available. Consider generating a new YAML configuration using the `Dark Souls III Options Template.yaml` file included in this release.
