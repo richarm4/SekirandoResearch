@@ -67,6 +67,10 @@ jobs:
         ref: dsms
         path: SoulsFormats
     - uses: microsoft/setup-msbuild@v2
+    - uses: actions/checkout@v4
+      with:
+        repository: thefifthmatt/yet-another-tab-control
+        path: yet-another-tab-control
 
     - name: Install dependencies
       run: dotnet restore SoulsRandomizers\SoulsRandomizers.sln
