@@ -37,9 +37,7 @@ The following options have been removed:
 
 * `pool_type` has been removed. Since there are no longer any non-randomized items in randomized categories, there's not a meaningful distinction between "shuffle" and "various" mode.
 
-In addition, the following options have changed:
-
-* `enable_*_locations` options have all been deprecated. Instead, there are a number of named location groups that you can add to the `exclude_locations` option to prevent them from containing important items. These location groups are:
+* `enable_*_locations` options have all been removed. Instead, there are a number of named location groups that you can add to the `exclude_locations` option to prevent them from containing important items. These location groups are:
 
   * Prominent: A small number of locations that are in very obvious locations. Mostly boss drops. Ideal for setting as priority locations.
   * Progression: Locations that contain items in vanilla which unlock other locations.
@@ -62,6 +60,8 @@ In addition, the following options have changed:
   * Spells: Locations that contain spells in vanilla.
 
   By default, the Hidden, Small Crystal Lizards, Upgrade, Small Souls, and Miscellaneous groups are in `exclude_locations`. Once you've chosen your excluded locations, you can set `excluded_locations: unrandomized` to preserve the default vanilla item placements for all excluded locations.
+
+In addition, the following options have changed:
 
 * The location names used in options like `exclude_locations` have changed. A full description of each location is included in `dark_souls_3.apworld`. To see it, run Archipelago's WebHost and go to http://localhost/tutorial/Dark%20Souls%20III/locations/en.
 
