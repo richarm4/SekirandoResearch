@@ -126,11 +126,6 @@ jobs:
         ref: archipelago-server
         path: SoulsRandomizers
 
-    - name: Download static files
-      run: |
-        Invoke-WebRequest -OutFile old.zip -Uri 'https://github.com/nex3/Dark-Souls-III-Archipelago-client/releases/download/v3.0.0-beta.1/DS3.Archipelago.2.3.0-beta.1.zip'
-        Expand-Archive old.zip -DestinationPath .
-
     - name: Download ModEngine2
       run: |
         Invoke-WebRequest -OutFile ME2.zip -Uri 'https://github.com/soulsmods/ModEngine2/releases/download/release-2.1.0/ModEngine-2.1.0.0-win64.zip'
@@ -145,10 +140,12 @@ jobs:
       run: |
         Move-Item -Path Dark-Souls-III-Archipelago-client\release -Destination $env:dir
         mkdir -p $env:dir\randomizer\spoiler_logs
-        Move-Item -Path SoulsRandomizers\dist $env:dir\randomizer
-        Move-Item -Path 'DS3 Archipelago 2.3.0-beta.1\randomizer\presets', 'DS3 Archipelago 2.3.0-beta.1\randomizer\script', 'DS3 Archipelago 2.3.0-beta.1\randomizer\sfx' -Destination $env:dir\randomizer
+        Move-Item -Path SoulsRandomizers\dist $env:dir\randomizer\dist
+        Move-Item -Path $env:dir\randomizer\dist\Presets $env:dir\randomizer\presets
+        Move-Item -Path $env:dir\randomizer\dist\Base\script $env:dir\randomizer\script
+        Move-Item -Path $env:dir\randomizer\dist\Base\sfx $env:dir\randomizer\sfx
         Move-Item -Path ModEngine-*\modengine2, ModEngine-*\launchmod_darksouls3.bat, ModEngine-*\modengine2_launcher.exe -Destination $env:dir
-        Move-Item -Path Archipelago-* -Destination $env:dir\archipelago
+        Compress-Archive -Path Archipelago-*\worlds\dark_souls_3 -DestinationPath $env:dir\dark_souls_3.apworld
 
     - name: Download archipelago.dll
       uses: actions/download-artifact@v4
