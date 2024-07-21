@@ -6,6 +6,7 @@
     "nlohmann-json",
     "openssl-windows",
     "sol2",
+    "lua",
     "tomlplusplus",
     "valijson",
     "websocketpp"

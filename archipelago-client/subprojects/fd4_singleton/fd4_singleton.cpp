@@ -93,10 +93,10 @@ FD4SingletonFinder::FD4SingletonFinder()
                 //LogTrace("{} -> {:x}", no_namespace_name, static_addr.as<uintptr_t>());
                 singleton_addresses[no_namespace_name] = static_addr.as<void**>();
             }
-            else if (prv_entry->second != static_addr) { // FD4DebugMenuManager has 2 addresses for some reason
+            // else if (prv_entry->second != static_addr) { // FD4DebugMenuManager has 2 addresses for some reason
                 //LogWarn("Address mismatch for singleton {} : {:p} vs {:p}",
                 //    no_namespace_name, (void*)prv_entry->second, static_addr.as<void*>());
-            }
+            // }
         }
     }
 }
