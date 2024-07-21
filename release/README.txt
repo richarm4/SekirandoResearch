@@ -22,7 +22,13 @@ This is a preview release of a new architecture for randomizing Dark Souls III f
 
 ## Generating a Multiworld
 
-To use this preview, just pass the `dark_souls_3.apworld` file included in this release to the Archipelago generator. If you're using the graphical Archipelago app, click "General > Install APWorld" to load it in.
+To use this preview:
+
+* Delete the old Dark Souls 3 world from your Archipelago installation. In the default installation, this is at `C:\ProgramData\Archipelago\lib\worlds\dark_souls_3`.
+* Pass the `dark_souls_3.apworld` file included in this release to the Archipelago generator. If you're using the graphical Archipelago app, click "General > Install APWorld" to load it in.
+* Copy `Dark Souls III Options Template.yaml` to Archipelago's `Players` directory and update it with your chosen configuration.
+* Add any other YAMLs you want for your multiworld, and generate the multiworld ("General > Generate" in the GUI).
+* Your multiworld `.zip` file will now be in Archipelago's `output` directory.
 
 Note that not all YAML fields for Dark Souls III's 2.x.x Archipelago randomizer are supported as-is, and some new fields are available. Consider generating a new YAML configuration using the `Dark Souls III Options Template.yaml` file included in this release.
 
