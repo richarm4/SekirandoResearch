@@ -24,9 +24,10 @@ jobs:
     runs-on: windows-latest
     steps:
     - uses: actions/checkout@v4
-      with:
-        submodules: recursive
+      with: {submodules: recursive}
     - uses: microsoft/setup-msbuild@v2
+      with: {msbuild-architecture: x64}
+    - run: msbuild --version
 
     # From https://learn.microsoft.com/en-us/vcpkg/consume/binary-caching-github-actions-cache
     - name: Export GitHub Actions cache environment variables
@@ -37,6 +38,8 @@ jobs:
           core.exportVariable('ACTIONS_RUNTIME_TOKEN', process.env.ACTIONS_RUNTIME_TOKEN || '');
 
     - run: vcpkg integrate install
+      working-directory: archipelago-client
+    - run: vcpkg install
       working-directory: archipelago-client
     - name: Build mod
       run: msbuild archipelago-client\archipelago-client.vcxproj -verbosity:diag '-property:Configuration=Release;Platform=x64'
