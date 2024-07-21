@@ -4,7 +4,7 @@
   "dependencies": [
     "asio",
     "nlohmann-json",
-    "openssl-windows",
+    "openssl",
     "sol2",
     "lua",
     "tomlplusplus",
