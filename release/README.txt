@@ -1,4 +1,4 @@
-# Dark Souls III Archipelago Randomizer 3.0.0-beta.8
+# Dark Souls III Archipelago Randomizer 3.0.0-beta.10
 
 This is a preview release of a new architecture for randomizing Dark Souls III for the Archipelago multiworld randomizer. It has a number of major feature improvements over the old 2.x.x line, including:
 
@@ -22,10 +22,7 @@ This is a preview release of a new architecture for randomizing Dark Souls III f
 
 ## Generating a Multiworld
 
-To use this preview, you must generate your multiworld with my fork of Archipelago, located in the `archipelago` directory of the release below. See [the "Running From Source" documentation] for more details. Once you've generated a ZIP file, upload it to https://archipelago.gg/uploads and you're good to go. (Unfortunately running from an `.apworld` file won't work until [this pull request] is merged and released.)
-
-[the "Running From Source" documentation]: https://github.com/nex3/Archipelago/blob/ds3-3.0.0-beta.8/docs/running%20from%20source.md
-[this pull request]: https://github.com/ArchipelagoMW/Archipelago/pull/2403
+To use this preview, just pass the `dark_souls_3.apworld` file included in this release to the Archipelago generator. If you're using the graphical Archipelago app, click "General > Install APWorld" to load it in.
 
 Note that not all YAML fields for Dark Souls III's 2.x.x Archipelago randomizer are supported as-is, and some new fields are available. Consider generating a new YAML configuration using the `Dark Souls III Options Template.yaml` file included in this release.
 
@@ -37,9 +34,7 @@ The following options have been removed:
 
 * `pool_type` has been removed. Since there are no longer any non-randomized items in randomized categories, there's not a meaningful distinction between "shuffle" and "various" mode.
 
-In addition, the following options have changed:
-
-* `enable_*_locations` options have all been deprecated. Instead, there are a number of named location groups that you can add to the `exclude_locations` option to prevent them from containing important items. These location groups are:
+* `enable_*_locations` options have all been removed. Instead, there are a number of named location groups that you can add to the `exclude_locations` option to prevent them from containing important items. These location groups are:
 
   * Prominent: A small number of locations that are in very obvious locations. Mostly boss drops. Ideal for setting as priority locations.
   * Progression: Locations that contain items in vanilla which unlock other locations.
@@ -62,6 +57,8 @@ In addition, the following options have changed:
   * Spells: Locations that contain spells in vanilla.
 
   By default, the Hidden, Small Crystal Lizards, Upgrade, Small Souls, and Miscellaneous groups are in `exclude_locations`. Once you've chosen your excluded locations, you can set `excluded_locations: unrandomized` to preserve the default vanilla item placements for all excluded locations.
+
+In addition, the following options have changed:
 
 * The location names used in options like `exclude_locations` have changed. A full description of each location is included in `dark_souls_3.apworld`. To see it, run Archipelago's WebHost and go to http://localhost/tutorial/Dark%20Souls%20III/locations/en.
 
