@@ -11,5 +11,12 @@
     "valijson",
     "websocketpp"
   ],
-  "builtin-baseline": "b346ee32f13f3bf2ef19ac02f982f6938f7a84ea"
+  "vcpkg-configuration": {
+    "default-registry": {
+      "$comment": "This is the same as the builtin registry, but listing it here ensures that vcpkg will always try to check out a new version rather than assuming the baseline is already checked out. To update the baseline, just find the latest revision of the repo.",
+      "kind": "git",
+      "baseline": "821100d967e1737d96414a308e3f7cbe0d1abf18",
+      "repository": "https://github.com/microsoft/vcpkg"
+    }
+  }
 }
