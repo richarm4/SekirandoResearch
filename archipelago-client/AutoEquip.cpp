@@ -62,7 +62,7 @@ std::optional<EquipSlot> CAutoEquip::SortItem(uint32_t dItemID) {
 		case ItemType::weapon: {
 			if ((dItemID >> 0x10) == 6) return std::nullopt; //Don't equip ammo
 			if ((dItemID & 0xFF000000) << 4 != 0x10000000) return EquipSlot::rightHand1;
-			break;
+			else return EquipSlot::leftHand1; //Shields equip	
 		};
 		case ItemType::protector: {
 			if (FindEquipType(dItemID, &pHelmetList[0])) return EquipSlot::head;
@@ -70,7 +70,6 @@ std::optional<EquipSlot> CAutoEquip::SortItem(uint32_t dItemID) {
 			else if (FindEquipType(dItemID, &pHandsList[0])) return EquipSlot::arms;
 			else if (FindEquipType(dItemID, &pLegsList[0])) return EquipSlot::legs;
 			else return std::nullopt;
-			break;
 		};
 		case ItemType::accessory: {
 			if ((dItemID & 0xFFFFFF00) == 0x20002700) return std::nullopt; //It's a covenant item
