@@ -1,4 +1,4 @@
-# Dark Souls III Archipelago Randomizer 3.0.0-beta.11
+# Dark Souls III Archipelago Randomizer 3.0.0-beta.12
 
 This is a preview release of a new architecture for randomizing Dark Souls III for the Archipelago multiworld randomizer. It has a number of major feature improvements over the old 2.x.x line, including:
 
@@ -68,9 +68,9 @@ In addition, the following options have changed:
 
 * The location names used in options like `exclude_locations` have changed. A full description of each location is included in `dark_souls_3.apworld`. To see it, run Archipelago's WebHost and go to http://localhost/tutorial/Dark%20Souls%20III/locations/en.
 
-## Running the Offline Randomizer
+## Running the Static Randomizer
 
-Once you've generated a multiworld, uploaded it to archipelago.gg, and started a room for it, you need to run the "offline" randomizer (so called because it's run before you start playing) once to get your game ready for Archipelago. To do so:
+Once you've generated a multiworld, uploaded it to archipelago.gg, and started a room for it, you need to run the "static" randomizer (which generates custom mod files for DS3) once to get your game ready for Archipelago. To do so:
 
 * Run `randomizer\DS3Randomizer.exe` in this directory.
 * Click "Load Archipelago run" in the lower right.
@@ -91,9 +91,9 @@ This release stands on the shoulders of many people who have worked tirelessly t
 
 * The original Archipelago mod and server code by Marechal-L and many other contributors, which is the foundation of the whole thing.
 
-* The single-player "offline" randomizer by thefifthmatt a.k.a. gracenotes, which is incredibly impressive in its own right.
+* The single-player "static" randomizer by thefifthmatt a.k.a. gracenotes, which is incredibly impressive in its own right.
 
-* ModEngine2 by grayttierney and katalash, which not only makes the "offline" randomizer possible in the first place but also makes it easy to combine mods in creative ways.
+* ModEngine2 by grayttierney and katalash, which not only makes the "static" randomizer possible in the first place but also makes it easy to combine mods in creative ways.
 
 * All the incredible and thankless reverse engineering, documentation, and tooling work done by countless people at The Grand Archives, in the ?ServerName? discord, and across the internet.
 
