@@ -80,28 +80,57 @@ uint64_t CItemRandomiser::HookedOnGetItem(void* pEquipInventoryData, uint32_t qI
 		uint32_t qItemID, uint32_t qCount, void* qUnknown2) {
 	// This function is frequently called with very high item IDs while the game is loading
 	// for unclear reasons. We want to ignore those calls.
-	auto isSyntheticItem = qItemCategory == 0x40000000 && qItemID > 3780000 && qItemID < 0xffffffU;
-	if (isSyntheticItem && Core->connected) {
-		EquipParamGoodsRow* row = GetGoodsParam(qItemID & 0xfffffffU);
-		if (row != NULL) {
-			ItemRandomiser->OnGetSyntheticItem(row);
+	bool removeItem = false;
+	if (qItemID < 0xA0000000 && Core->connected) {
+		if (qItemCategory == 0 && qItemID > 23010000) {
+			EquipParamWeaponRow* row = GetWeaponParam(qItemID & 0xfffffffU - qItemID % 100);
+			if (row != NULL) {
+				ItemRandomiser->OnGetSyntheticItem(
+					row->vagrantItemLotId, row->vagrantBonuseneDropItemLotId);
+			}
+		} else if (qItemCategory == 0x10000000 && qItemID > 99003000) {
+			EquipParamProtectorRow* row = GetProtectorParam(qItemID & 0xfffffffU);
+			if (row != NULL) {
+				ItemRandomiser->OnGetSyntheticItem(
+					row->vagrantItemLotId, row->vagrantBonuseneDropItemLotId);
+			}
+		}
+		else if (qItemCategory == 0x20000000 && qItemID > 3780000) {
+			EquipParamAccessoryRow* row = GetAccessoryParam(qItemID & 0xfffffffU);
+			if (row != NULL) {
+				ItemRandomiser->OnGetSyntheticItem(
+					row->vagrantItemLotId, row->vagrantBonusEneDropItemLotId);
+			}
+		} else if (qItemCategory == 0x40000000 && qItemID > 3780000) {
+			EquipParamGoodsRow* row = GetGoodsParam(qItemID & 0xfffffffU);
+			if (row != NULL) {
+				ItemRandomiser->OnGetSyntheticItem(row);
+				removeItem = row->disableUseAtColiseum;
+			}
 		}
 	}
+
 	auto result = ItemRandomiser->OnGetItemOriginal(pEquipInventoryData, qItemCategory, qItemID, qCount, qUnknown2);
 	// If the player isn't connected to Archipelago, hold onto foreign items so that we can send
-	// them out once they reconnect.
-	if (isSyntheticItem && Core->connected) GameHook->removeFromInventory(qItemCategory, qItemID);
+	// them out once they reconnect
+	if (removeItem && Core->connected) GameHook->removeFromInventory(qItemCategory, qItemID);
 	return result;
 }
 
+VOID CItemRandomiser::OnGetSyntheticItem(EquipParamGoodsRow* row) {
+	// TODO: We shouldn't call this with non-AP items, but we do sometimes.
+	if (row->vagrantItemLotId < 0) return;
+	ItemRandomiser->OnGetSyntheticItem(row->vagrantItemLotId, row->vagrantBonusEneDropItemLotId);
+}
+
 // Tells the Archipelago server that a synthetic item was aquired (meaning that a location was
-// visited and possibly that another world's item was received. The itemID should contain only the
+// visited and possibly that another world's item was received). The itemID should contain only the
 // base ID, not the category flag.
 //
 // Returns the parameter data about the aquired item.
-VOID CItemRandomiser::OnGetSyntheticItem(EquipParamGoodsRow* row) {
-	int64_t archipelagoLocationId = row->vagrantItemLotId +
-		((int64_t)(row->vagrantBonusEneDropItemLotId) << 32);
+VOID CItemRandomiser::OnGetSyntheticItem(uint32_t archipelagoId1, uint32_t archipelagoId2) {
+	int64_t archipelagoLocationId = archipelagoId1 + ((int64_t)(archipelagoId2) << 32);
+	spdlog::info("Pushing AP location ID {}", archipelagoLocationId);
 	checkedLocationsList.push_front(archipelagoLocationId);
 }
 
