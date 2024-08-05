@@ -130,7 +130,6 @@ VOID CItemRandomiser::OnGetSyntheticItem(EquipParamGoodsRow* row) {
 // Returns the parameter data about the aquired item.
 VOID CItemRandomiser::OnGetSyntheticItem(uint32_t archipelagoId1, uint32_t archipelagoId2) {
 	int64_t archipelagoLocationId = archipelagoId1 + ((int64_t)(archipelagoId2) << 32);
-	spdlog::info("Pushing AP location ID {}", archipelagoLocationId);
 	checkedLocationsList.push_front(archipelagoLocationId);
 }
 
