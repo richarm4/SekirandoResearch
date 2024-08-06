@@ -107,7 +107,7 @@ jobs:
         ref: ds3-stable
 
     - run: git fetch origin ds3-full-rando
-    - run: git merge ds3-full-rando
+    - run: git merge origin/ds3-full-rando
     - run: git push origin ds3-stable
 
     - run: git tag ds3-${{ needs.version.outputs.version }} origin/ds3-full-rando
