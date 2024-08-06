@@ -53,14 +53,13 @@ jobs:
         if-no-files-found: error
 
   build-static:
-    needs: [version]
     runs-on: windows-latest
 
     steps:
     - uses: actions/checkout@v4
       with:
         repository: nex3/SoulsRandomizers
-        ref: ${{ github.ref_name }}
+        ref: ds3-full-rando
         token: ${{ secrets.GH_TOKEN }}
         path: SoulsRandomizers
     - uses: actions/checkout@v4
@@ -92,7 +91,7 @@ jobs:
         path: SoulsRandomizers\DS3Randomizer\bin\publish\DS3Randomizer.exe
         if-no-files-found: error
 
-    - run: git tag v${{ needs.version.outputs.version }}
+    - run: git tag v${{ github.ref_name }}
     - run: git push --tag
 
   update-archipelago:
