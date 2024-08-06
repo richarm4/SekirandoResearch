@@ -94,15 +94,6 @@ jobs:
     - run: git tag v${{ github.ref_name }}
     - run: git push --tag
 
-  update-archipelago:
-    needs: [version]
-    runs-on: ubuntu-latest
-
-    steps:
-    - uses: actions/checkout@v4
-      with:
-        repository: nex3/Archipelago
-
   build-yaml:
     runs-on: windows-latest
     needs: [version]
@@ -115,7 +106,7 @@ jobs:
         ref: ds3-stable
         fetch-depth: 0
 
-    - run: git merge ds3-full-rando
+    - run: git merge --no-edit origin/ds3-full-rando
     - run: git push origin ds3-stable
 
     - run: git tag ds3-${{ needs.version.outputs.version }} ds3-full-rando
