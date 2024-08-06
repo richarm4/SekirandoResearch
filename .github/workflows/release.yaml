@@ -107,7 +107,6 @@ jobs:
         ref: ds3-stable
 
     - run: git fetch origin ds3-full-rando
-    - run: git checkout -b ds3-stable origin/ds3-stable
     - run: git merge ds3-full-rando
     - run: git push origin ds3-stable
 
