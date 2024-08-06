@@ -59,7 +59,7 @@ jobs:
     - uses: actions/checkout@v4
       with:
         repository: nex3/SoulsRandomizers
-        ref: ds3-full-rando
+        ref: archipelago-server
         token: ${{ secrets.GH_TOKEN }}
         path: SoulsRandomizers
     - uses: actions/checkout@v4
@@ -112,7 +112,7 @@ jobs:
     - run: git merge --no-edit origin/ds3-full-rando
     - run: git push origin ds3-stable
 
-    - run: git tag ds3-${{ needs.version.outputs.version }} ds3-full-rando
+    - run: git tag ds3-${{ needs.version.outputs.version }} origin/ds3-full-rando
     - run: git tag ds3-${{ needs.version.outputs.version }}-stable
     - run: git push --tag
 
