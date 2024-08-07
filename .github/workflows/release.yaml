@@ -117,6 +117,9 @@ jobs:
     - run: git tag ds3-${{ needs.version.outputs.version }} origin/ds3-full-rando
     - run: git tag ds3-${{ needs.version.outputs.version }}-stable
     - run: git push --tag
+  
+    - run: git checkout 0.5.0
+    - run: git checkout ds3-stable worlds/dark_souls_3/
 
     - uses: actions/setup-python@v5
       with:
