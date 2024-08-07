@@ -1,4 +1,4 @@
-# Dark Souls III Archipelago Randomizer 3.0.0-beta.14
+# Dark Souls III Archipelago Randomizer 3.0.0-beta.15
 
 This is a preview release of a new architecture for randomizing Dark Souls III for the Archipelago multiworld randomizer. It has a number of major feature improvements over the old 2.x.x line, including:
 
@@ -97,4 +97,4 @@ This release stands on the shoulders of many people who have worked tirelessly t
 
 * All the incredible and thankless reverse engineering, documentation, and tooling work done by countless people at The Grand Archives, in the ?ServerName? discord, and across the internet.
 
-* Debugging help from members of the Archipelago discord server, particularly Exempt-Medic.
+* Debugging help and coding assistance from members of the Archipelago discord server, particularly Exempt-Medic and eldsmith.
