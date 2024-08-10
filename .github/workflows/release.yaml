@@ -106,7 +106,7 @@ jobs:
     - run: git config --global user.email "nattlebot@nex-3.com"
     - run: git config --global user.name "Nattlebot Robobaum"
 
-    - run: git merge --no-edit origin/ds3-full-rando
+    - run: git merge --no-edit origin/ds3-beta
     - run: git push origin ds3-stable
   
     - run: git checkout 0.5.0
@@ -205,7 +205,7 @@ jobs:
       with:
         repository: nex3/Archipelago
         token: ${{ secrets.GH_TOKEN }}
-        ref: ds3-full-rando
+        ref: ds3-beta
         fetch-depth: 0
 
     - run: git tag ds3-${{ needs.version.outputs.version }}
