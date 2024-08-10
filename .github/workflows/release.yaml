@@ -198,6 +198,7 @@ jobs:
 
   # Only push tags once everything else builds successfully, so that they don't break redeploys.
   tag-server:
+    runs-on: ubuntu-latest
     needs: [build-zip]
 
     steps:
@@ -213,6 +214,7 @@ jobs:
     - run: git push --tag
 
   tag-static:
+    runs-on: ubuntu-latest
     needs: [build-zip]
 
     steps:
