@@ -91,11 +91,6 @@ jobs:
         path: SoulsRandomizers\DS3Randomizer\bin\publish\DS3Randomizer.exe
         if-no-files-found: error
 
-    - run: git tag ${{ github.ref_name }}
-      working-directory: SoulsRandomizers
-    - run: git push --tag
-      working-directory: SoulsRandomizers
-
   build-yaml:
     runs-on: windows-latest
     needs: [version]
@@ -111,12 +106,8 @@ jobs:
     - run: git config --global user.email "nattlebot@nex-3.com"
     - run: git config --global user.name "Nattlebot Robobaum"
 
-    - run: git merge --no-edit origin/ds3-full-rando
+    - run: git merge --no-edit origin/ds3-beta
     - run: git push origin ds3-stable
-
-    - run: git tag ds3-${{ needs.version.outputs.version }} origin/ds3-full-rando
-    - run: git tag ds3-${{ needs.version.outputs.version }}-stable
-    - run: git push --tag
   
     - run: git checkout 0.5.0
     - run: git checkout ds3-stable worlds/dark_souls_3/
@@ -165,7 +156,7 @@ jobs:
 
     - name: Download Archipelago repo
       run: |
-        Invoke-WebRequest -OutFile Archipelago.zip -Uri "https://github.com/nex3/Archipelago/archive/refs/tags/ds3-${{ needs.version.outputs.version }}-stable.zip"
+        Invoke-WebRequest -OutFile Archipelago.zip -Uri "https://github.com/nex3/Archipelago/archive/refs/heads/ds3-stable.zip"
         Expand-Archive Archipelago.zip .
 
     - name: Assemble release
@@ -204,3 +195,34 @@ jobs:
       with:
         body_path: ${{ env.dir }}/README.txt
         files: ${{ env.dir }}.zip
+
+  # Only push tags once everything else builds successfully, so that they don't break redeploys.
+  tag-server:
+    runs-on: ubuntu-latest
+    needs: [build-zip]
+
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        repository: nex3/Archipelago
+        token: ${{ secrets.GH_TOKEN }}
+        ref: ds3-beta
+        fetch-depth: 0
+
+    - run: git tag ds3-${{ needs.version.outputs.version }}
+    - run: git tag ds3-${{ needs.version.outputs.version }}-stable origin/ds3-stable
+    - run: git push --tag
+
+  tag-static:
+    runs-on: ubuntu-latest
+    needs: [build-zip]
+
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        repository: nex3/SoulsRandomizers
+        ref: archipelago-server
+        token: ${{ secrets.GH_TOKEN }}
+
+    - run: git tag ${{ github.ref_name }}
+    - run: git push --tag
