@@ -40,7 +40,7 @@
 #define FE_ApplySettings 14
 #define FE_PatternFailed 15
 
-#define VERSION "3.0.0-beta.18"
+#define VERSION "3.0.0-beta.19"
 
 
 class CCore: public modengine::ModEngineExtension {
