@@ -199,7 +199,7 @@ jobs:
   # Only push tags once everything else builds successfully, so that they don't break redeploys.
   tag-server:
     runs-on: ubuntu-latest
-    needs: [build-zip]
+    needs: [version, build-zip]
 
     steps:
     - uses: actions/checkout@v4
