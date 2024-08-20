@@ -1,4 +1,4 @@
-# Dark Souls III Archipelago Randomizer 3.0.0-beta.20
+# Dark Souls III Archipelago Randomizer 3.0.0-beta.21
 
 This is a preview release of a new architecture for randomizing Dark Souls III for the Archipelago multiworld randomizer. It has a number of major feature improvements over the old 2.x.x line, including:
 
