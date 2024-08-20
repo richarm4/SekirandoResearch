@@ -209,7 +209,7 @@ jobs:
       run: Compress-Archive -Path $env:dir -DestinationPath "${{ env.dir }}.zip"
 
     - name: Remove DS3Randomizer.exe
-      run: rm ${{ env.dir }}/randomizer/DS3Randomizer.exe
+      run: rm "${{ env.dir }}/randomizer/DS3Randomizer.exe"
 
     - name: Download DS3Randomizer.exe (self-contained)
       uses: actions/download-artifact@v4
