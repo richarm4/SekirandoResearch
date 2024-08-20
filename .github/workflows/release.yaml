@@ -83,12 +83,21 @@ jobs:
       run: dotnet restore SoulsRandomizers\SoulsRandomizers.sln
 
     - name: Build randomizer
-      run: msbuild SoulsRandomizers\DS3Randomizer\DS3Randomizer.csproj '-property:Configuration=Release (Archipelago);PublishDir=bin\publish;PublishProtocol=FileSystem;_TargetId=Folder' '-t:Build;Publish'
+      run: dotnet publish -c 'Release (Archipelago)' .\DS3Randomizer\DS3Randomizer.csproj -o bin\publish\standard
+
+    - name: Build randomizer (self-contained)
+      run: dotnet publish --self-contained -c 'Release (Archipelago)' .\DS3Randomizer\DS3Randomizer.csproj -o bin\publish\self-contained
 
     - uses: actions/upload-artifact@v4
       with:
         name: DS3Randomizer.exe
-        path: SoulsRandomizers\DS3Randomizer\bin\publish\DS3Randomizer.exe
+        path: SoulsRandomizers\DS3Randomizer\bin\publish\standard\DS3Randomizer.exe
+        if-no-files-found: error
+
+    - uses: actions/upload-artifact@v4
+      with:
+        name: DS3Randomizer-self-contained.exe
+        path: SoulsRandomizers\DS3Randomizer\bin\publish\self-contained\DS3Randomizer.exe
         if-no-files-found: error
 
   build-yaml:
@@ -176,25 +185,39 @@ jobs:
         name: archipelago.dll
         path: ${{ env.dir }}
 
-    - name: Download DS3Randomizer.exe
-      uses: actions/download-artifact@v4
-      with:
-        name: DS3Randomizer.exe
-        path: ${{ env.dir }}/randomizer
-
     - name: Download YAML
       uses: actions/download-artifact@v4
       with:
         name: Dark Souls III Options Template.yaml
         path: ${{ env.dir }}
 
+    - name: Download DS3Randomizer.exe
+      uses: actions/download-artifact@v4
+      with:
+        name: DS3Randomizer.exe
+        path: ${{ env.dir }}/randomizer
+
     - name: Zip release
       run: Compress-Archive -Path $env:dir -DestinationPath "${{ env.dir }}.zip"
+
+    - name: Remove DS3Randomizer.exe
+      run: rm ${{ env.dir }}/randomizer/DS3Randomizer.exe
+
+    - name: Download DS3Randomizer.exe (self-contained)
+      uses: actions/download-artifact@v4
+      with:
+        name: DS3Randomizer.exe
+        path: ${{ env.dir }}/randomizer
+
+    - name: Zip release (self-contained)
+      run: Compress-Archive -Path $env:dir -DestinationPath "${{ env.dir }}-self-contained.zip"
 
     - uses: softprops/action-gh-release@v2
       with:
         body_path: ${{ env.dir }}/README.txt
-        files: ${{ env.dir }}.zip
+        files: |
+          ${{ env.dir }}.zip
+          ${{ env.dir }}-self-contained.zip
 
   # Only push tags once everything else builds successfully, so that they don't break redeploys.
   tag-server:
