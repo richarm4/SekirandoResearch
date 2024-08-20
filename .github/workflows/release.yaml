@@ -91,10 +91,10 @@ jobs:
       run: dotnet restore SoulsRandomizers\SoulsRandomizers.sln
 
     - name: Build randomizer
-      run: dotnet publish -c 'Release (Archipelago)' .\DS3Randomizer\DS3Randomizer.csproj -o bin\publish\standard
+      run: dotnet publish -o bin\publish\standard -c 'Release (Archipelago)' .\SoulsRandomizers\DS3Randomizer\DS3Randomizer.csproj
 
     - name: Build randomizer (self-contained)
-      run: dotnet publish --self-contained -c 'Release (Archipelago)' .\DS3Randomizer\DS3Randomizer.csproj -o bin\publish\self-contained
+      run: dotnet publish --self-contained -o bin\publish\self-contained -c 'Release (Archipelago)' .\SoulsRandomizers\DS3Randomizer\DS3Randomizer.csproj
 
     - uses: actions/upload-artifact@v4
       with:
