@@ -208,6 +208,11 @@ jobs:
     - name: Zip release
       run: Compress-Archive -Path $env:dir -DestinationPath "${{ env.dir }}.zip"
 
+    # The next three steps create a separate "self-contained" zip which includes the whole .NET
+    # framework in DS3Randomizer.exe. This is much larger, but it's useful for people who don't
+    # want extra installation overhead—and particulary for Proton users, for whom installing a .NET
+    # framework version in the same "bottle" as another application is a major pain.
+
     - name: Remove DS3Randomizer.exe
       run: rm "${{ env.dir }}/randomizer/DS3Randomizer.exe"
 
