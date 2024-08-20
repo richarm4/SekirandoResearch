@@ -10,6 +10,7 @@ jobs:
 
     outputs:
       version: ${{ steps.version.outputs.version }}
+      prerelease: ${{ steps.prerelease.outputs.prerelease }}
     steps:
     - id: version
       run: |
@@ -18,6 +19,13 @@ jobs:
           ver="${ver:1}"
         fi
         echo "version=$ver" >> "$GITHUB_OUTPUT"
+    - id: prerelease
+      run: |
+        if [[ "${{ github.ref_name }}" == *-* ]]; then
+          echo "prerelease=true" >> "$GITHUB_OUTPUT"
+        else
+          echo "prerelease=false" >> "$GITHUB_OUTPUT"
+        fi
 
   build-mod:
     runs-on: windows-latest
@@ -215,6 +223,7 @@ jobs:
     - uses: softprops/action-gh-release@v2
       with:
         body_path: ${{ env.dir }}/README.txt
+        prerelease: ${{ needs.version.outputs.prerelease }}
         files: |
           ${{ env.dir }}.zip
           ${{ env.dir }}-self-contained.zip
