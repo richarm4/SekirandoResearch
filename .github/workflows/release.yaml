@@ -211,11 +211,14 @@ jobs:
     - name: Remove DS3Randomizer.exe
       run: rm "${{ env.dir }}/randomizer/DS3Randomizer.exe"
 
-    - name: Download DS3Randomizer.exe (self-contained)
+    - name: Download DS3Randomizer-self-contained.exe
       uses: actions/download-artifact@v4
       with:
-        name: DS3Randomizer.exe
+        name: DS3Randomizer-self-contained.exe
         path: ${{ env.dir }}/randomizer
+
+    - name: Rename DS3Randomizer-self-contained.exe
+      run: mv "${{ env.dir }}/randomizer/DS3Randomizer-self-contained.exe" "${{ env.dir }}/randomizer/DS3Randomizer.exe"
 
     - name: Zip release (self-contained)
       run: Compress-Archive -Path $env:dir -DestinationPath "${{ env.dir }}-self-contained.zip"
