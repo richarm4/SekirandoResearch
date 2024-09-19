@@ -43,7 +43,7 @@ To build the project:
 3. Open `archipelago-client\archipelago-client.sln` in Visual Studio.
 4. Run Build > Build.
 
-That's it! The mod will be in `x64\Debug\archipelago.yaml`. Copy that over the file of the same
+That's it! The mod will be in `x64\Debug\archipelago.dll`. Copy that over the file of the same
 name from the released version of the mod and you can test against your local build.
 
 ## Credits
