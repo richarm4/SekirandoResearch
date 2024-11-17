@@ -62,6 +62,7 @@ jobs:
 
   build-static:
     runs-on: windows-latest
+    needs: [version]
 
     steps:
     - uses: actions/checkout@v4
@@ -92,6 +93,8 @@ jobs:
 
     - name: Build randomizer
       run: dotnet publish -o standard -c 'Release (Archipelago)' .\SoulsRandomizers\DS3Randomizer\DS3Randomizer.csproj
+      env:
+        DS3_AP_VERSION: ${{ needs.version.outputs.version }}
 
     - uses: actions/upload-artifact@v4
       with:
