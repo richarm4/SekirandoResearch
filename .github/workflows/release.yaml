@@ -109,19 +109,10 @@ jobs:
     steps:
     - uses: actions/checkout@v4
       with:
-        repository: nex3/Archipelago
+        repository: ArchipelagoMW/Archipelago
         token: ${{ secrets.GH_TOKEN }}
-        ref: ds3-stable
+        ref: 0.5.1
         fetch-depth: 0
-
-    - run: git config --global user.email "nattlebot@nex-3.com"
-    - run: git config --global user.name "Nattlebot Robobaum"
-
-    - run: git merge --no-edit origin/ds3-beta
-    - run: git push origin ds3-stable
-  
-    - run: git checkout 0.5.0
-    - run: git checkout ds3-stable worlds/dark_souls_3/
 
     - uses: actions/setup-python@v5
       with:
@@ -165,11 +156,6 @@ jobs:
         Invoke-WebRequest -OutFile ME2.zip -Uri 'https://github.com/soulsmods/ModEngine2/releases/download/release-2.1.0/ModEngine-2.1.0.0-win64.zip'
         Expand-Archive ME2.zip -DestinationPath .
 
-    - name: Download Archipelago repo
-      run: |
-        Invoke-WebRequest -OutFile Archipelago.zip -Uri "https://github.com/nex3/Archipelago/archive/refs/heads/ds3-stable.zip"
-        Expand-Archive Archipelago.zip .
-
     - name: Assemble release
       run: |
         Move-Item -Path Dark-Souls-III-Archipelago-client\release -Destination $env:dir
@@ -179,7 +165,6 @@ jobs:
         Move-Item -Path $env:dir\randomizer\dist\Base\script $env:dir\randomizer\script
         Move-Item -Path $env:dir\randomizer\dist\Base\sfx $env:dir\randomizer\sfx
         Move-Item -Path ModEngine-*\modengine2, ModEngine-*\launchmod_darksouls3.bat, ModEngine-*\modengine2_launcher.exe -Destination $env:dir
-        Compress-Archive -Path Archipelago-*\worlds\dark_souls_3 -DestinationPath $env:dir\dark_souls_3.apworld
 
     - name: Download archipelago.dll
       uses: actions/download-artifact@v4
@@ -218,11 +203,10 @@ jobs:
       with:
         repository: nex3/Archipelago
         token: ${{ secrets.GH_TOKEN }}
-        ref: ds3-beta
+        ref: ds3-3.0
         fetch-depth: 0
 
     - run: git tag ds3-${{ needs.version.outputs.version }}
-    - run: git tag ds3-${{ needs.version.outputs.version }}-stable origin/ds3-stable
     - run: git push --tag
 
   tag-static:
